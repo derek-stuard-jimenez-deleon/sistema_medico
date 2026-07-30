@@ -19,15 +19,18 @@ public class PagoService {
     private final CitaRepository citaRepository;
     private final UsuarioRepository usuarioRepository;
     private final SucursalRepository sucursalRepository;
+    private final NotificacionService notificacionService;
 
     public PagoService(PagoRepository pagoRepository,
                        CitaRepository citaRepository,
                        UsuarioRepository usuarioRepository,
-                       SucursalRepository sucursalRepository) {
+                       SucursalRepository sucursalRepository,
+                       NotificacionService notificacionService) {
         this.pagoRepository = pagoRepository;
         this.citaRepository = citaRepository;
         this.usuarioRepository = usuarioRepository;
         this.sucursalRepository = sucursalRepository;
+        this.notificacionService = notificacionService;
     }
 
     @Transactional
@@ -44,7 +47,6 @@ public class PagoService {
                     .orElseThrow(() -> new RecursoNoEncontradoException("Cajero no encontrado."));
         }
 
-        // Si es pago de una Cita, validamos que exista y calculamos el cambio si es efectivo
         Cita cita = null;
         if (tipoOrigen == Pago.TipoOrigenPago.CITA) {
             cita = citaRepository.findById(request.getReferenciaId())
@@ -79,10 +81,21 @@ public class PagoService {
 
         Pago guardado = pagoRepository.save(pago);
 
-        // Si era una Cita, la marcamos como pagada
         if (cita != null) {
             cita.setEstado(Cita.EstadoCita.PAGADA);
             citaRepository.save(cita);
+
+            notificacionService.enviar(
+                    "Comprobante de Pago",
+                    cita.getPaciente().getCorreo(),
+                    "Comprobante de pago - Sistema Medico",
+                    "Hola " + cita.getPaciente().getNombreCompleto() + ",\n\n" +
+                            "Hemos recibido tu pago exitosamente.\n" +
+                            "Monto: Q" + request.getMonto() + "\n" +
+                            "Metodo de pago: " + metodoPago + "\n" +
+                            "Numero de transaccion: " + guardado.getNumeroTransaccion() + "\n\n" +
+                            "Sistema Medico 2026"
+            );
         }
 
         return mapearAResponse(guardado);

@@ -19,19 +19,22 @@ public class CitaService {
     private final EspecialidadRepository especialidadRepository;
     private final SucursalRepository sucursalRepository;
     private final SedeEspecialidadRepository sedeEspecialidadRepository;
+    private final NotificacionService notificacionService;
 
     public CitaService(CitaRepository citaRepository,
                        PacienteRepository pacienteRepository,
                        UsuarioRepository usuarioRepository,
                        EspecialidadRepository especialidadRepository,
                        SucursalRepository sucursalRepository,
-                       SedeEspecialidadRepository sedeEspecialidadRepository) {
+                       SedeEspecialidadRepository sedeEspecialidadRepository,
+                       NotificacionService notificacionService) {
         this.citaRepository = citaRepository;
         this.pacienteRepository = pacienteRepository;
         this.usuarioRepository = usuarioRepository;
         this.especialidadRepository = especialidadRepository;
         this.sucursalRepository = sucursalRepository;
         this.sedeEspecialidadRepository = sedeEspecialidadRepository;
+        this.notificacionService = notificacionService;
     }
 
     @Transactional
@@ -52,19 +55,16 @@ public class CitaService {
         Sucursal sucursal = sucursalRepository.findById(request.getSucursalId())
                 .orElseThrow(() -> new RecursoNoEncontradoException("Sucursal no encontrada."));
 
-        // Validar que el medico realmente ejerce esa especialidad
         if (medico.getEspecialidad() == null || !medico.getEspecialidad().getId().equals(especialidad.getId())) {
             throw new IllegalArgumentException("El médico seleccionado no pertenece a la especialidad indicada.");
         }
 
-        // Validar que la especialidad este disponible en esa sede
         boolean disponibleEnSede = sedeEspecialidadRepository
                 .existsBySucursalIdAndEspecialidadId(sucursal.getId(), especialidad.getId());
         if (!disponibleEnSede) {
             throw new IllegalArgumentException("La especialidad seleccionada no está disponible en esta sucursal.");
         }
 
-        // Validar que el medico no tenga ya una cita activa en ese mismo horario
         boolean tieneChoque = citaRepository.findByMedicoIdAndEstado(medico.getId(), Cita.EstadoCita.RESERVADA)
                 .stream().anyMatch(c -> c.getFechaHora().equals(request.getFechaHora()));
         if (tieneChoque) {
@@ -82,6 +82,21 @@ public class CitaService {
         cita.setTipo(Cita.TipoCita.NORMAL);
 
         Cita guardada = citaRepository.save(cita);
+
+        notificacionService.enviar(
+                "Confirmacion Cita",
+                paciente.getCorreo(),
+                "Confirmacion de tu cita medica",
+                "Hola " + paciente.getNombreCompleto() + ",\n\n" +
+                        "Tu cita ha sido reservada exitosamente.\n" +
+                        "Medico: " + medico.getNombreCompleto() + "\n" +
+                        "Especialidad: " + especialidad.getNombre() + "\n" +
+                        "Fecha y hora: " + request.getFechaHora() + "\n" +
+                        "Sucursal: " + sucursal.getNombre() + "\n\n" +
+                        "Por favor, realiza el pago para confirmar tu cita.\n\n" +
+                        "Sistema Medico 2026"
+        );
+
         return mapearAResponse(guardada);
     }
 
