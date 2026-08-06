@@ -2,6 +2,7 @@ package com.sistemamedico.app.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -9,6 +10,11 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 public class SecurityConfig {
@@ -19,15 +25,17 @@ public class SecurityConfig {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
+    // Cadena 1: protege /api/** con JWT (sin estado, como hasta ahora)
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    @Order(1)
+    public SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
         http
+                .securityMatcher("/api/**")
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/api/health").permitAll()
-                        // TEMPORAL: mientras terminamos de mapear permisos por rol, dejamos el resto autenticado sin restriccion de rol
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
@@ -35,30 +43,45 @@ public class SecurityConfig {
         return http.build();
     }
 
+    // Cadena 2: protege las paginas Thymeleaf con sesion tradicional (formulario de login)
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
+    @Order(2)
+    public SecurityFilterChain webFilterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/", "/login", "/css/**", "/js/**", "/images/**").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .formLogin(form -> form
+                        .loginPage("/login")
+                        .defaultSuccessUrl("/dashboard", true)
+                        .permitAll()
+                )
+                .logout(logout -> logout
+                        .logoutUrl("/logout")
+                        .logoutSuccessUrl("/login?logout")
+                        .permitAll()
+                );
+
+        return http.build();
     }
 
     @Bean
-    public org.springframework.boot.web.servlet.FilterRegistrationBean<JwtAuthenticationFilter> jwtFilterRegistration(JwtAuthenticationFilter filter) {
-        org.springframework.boot.web.servlet.FilterRegistrationBean<JwtAuthenticationFilter> registration =
-                new org.springframework.boot.web.servlet.FilterRegistrationBean<>(filter);
-        registration.setEnabled(false); // evita el doble registro automatico de Spring Boot
-        return registration;
-    }
-    @Bean
-    public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
-        org.springframework.web.cors.CorsConfiguration config = new org.springframework.web.cors.CorsConfiguration();
-        config.setAllowedOrigins(java.util.List.of("http://localhost:5173"));
-        config.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        config.setAllowedHeaders(java.util.List.of("*"));
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
 
-        org.springframework.web.cors.UrlBasedCorsConfigurationSource source =
-                new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
     }
 
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
 }

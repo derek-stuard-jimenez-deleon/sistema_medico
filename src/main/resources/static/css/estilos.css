@@ -1,0 +1,85 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f4f6fa;
+}
+
+/* --- Navbar --- */
+.navbar-sistema {
+    background: linear-gradient(90deg, #1a1a2e 0%, #232347 100%);
+}
+
+/* --- Login --- */
+.pantalla-login {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1a1a2e 0%, #3a3a6e 100%);
+}
+
+.card-login {
+    max-width: 400px;
+    width: 100%;
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+}
+
+.card-login .icono-login {
+    width: 56px;
+    height: 56px;
+    background-color: #1a1a2e;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    color: white;
+    font-size: 24px;
+}
+
+/* --- Botones --- */
+.btn-sistema {
+    background-color: #1a1a2e;
+    border-color: #1a1a2e;
+    color: white;
+    font-weight: 600;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.btn-sistema:hover {
+    background-color: #2a2a4e;
+    border-color: #2a2a4e;
+    color: white;
+}
+
+/* --- Tarjetas de contenido --- */
+.card-panel {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+}
+
+/* --- Tablas --- */
+.table-sistema thead {
+    background-color: #f0f1f8;
+}
+
+.table-sistema th {
+    color: #4a4a68;
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* --- Badges de estado --- */
+.badge-estado {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
