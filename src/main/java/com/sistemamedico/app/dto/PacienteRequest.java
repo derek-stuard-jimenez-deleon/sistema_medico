@@ -20,8 +20,8 @@ public class PacienteRequest {
     @Email(message = "El formato del correo no es válido.")
     private String correo;
 
-    @Size(min = 5, max = 50, message = "El número de seguro debe contener entre 5 y 50 caracteres.")
-    private String numeroSeguro; // opcional
+    @Pattern(regexp = "^$|^.{5,50}$", message = "El número de seguro debe contener entre 5 y 50 caracteres.")
+    private String numeroSeguro; // opcional — acepta vacío o 5-50 caracteres
 
     @NotBlank(message = "El campo Usuario es obligatorio.")
     @Size(min = 8, max = 9, message = "El usuario debe tener entre 8 y 9 caracteres.")
