@@ -5,6 +5,8 @@ import com.sistemamedico.app.dto.PagoResponse;
 import com.sistemamedico.app.exception.RecursoNoEncontradoException;
 import com.sistemamedico.app.model.*;
 import com.sistemamedico.app.repository.*;
+import com.sistemamedico.app.model.OrdenLaboratorio;
+import com.sistemamedico.app.repository.OrdenLaboratorioRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,17 +22,20 @@ public class PagoService {
     private final UsuarioRepository usuarioRepository;
     private final SucursalRepository sucursalRepository;
     private final NotificacionService notificacionService;
+    private final OrdenLaboratorioRepository ordenLaboratorioRepository;
 
     public PagoService(PagoRepository pagoRepository,
                        CitaRepository citaRepository,
                        UsuarioRepository usuarioRepository,
                        SucursalRepository sucursalRepository,
-                       NotificacionService notificacionService) {
+                       NotificacionService notificacionService,
+                       OrdenLaboratorioRepository ordenLaboratorioRepository) {
         this.pagoRepository = pagoRepository;
         this.citaRepository = citaRepository;
         this.usuarioRepository = usuarioRepository;
         this.sucursalRepository = sucursalRepository;
         this.notificacionService = notificacionService;
+        this.ordenLaboratorioRepository = ordenLaboratorioRepository;
     }
 
     @Transactional
@@ -48,11 +53,19 @@ public class PagoService {
         }
 
         Cita cita = null;
+        OrdenLaboratorio orden = null;
+
         if (tipoOrigen == Pago.TipoOrigenPago.CITA) {
             cita = citaRepository.findById(request.getReferenciaId())
                     .orElseThrow(() -> new RecursoNoEncontradoException("Cita no encontrada."));
             if (cita.getEstado() == Cita.EstadoCita.PAGADA) {
                 throw new IllegalArgumentException("Esta cita ya fue pagada.");
+            }
+        } else if (tipoOrigen == Pago.TipoOrigenPago.LABORATORIO) {
+            orden = ordenLaboratorioRepository.findById(request.getReferenciaId())
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Orden de laboratorio no encontrada."));
+            if (orden.getEstado() != OrdenLaboratorio.EstadoOrden.PENDIENTE) {
+                throw new IllegalArgumentException("Esta orden ya fue pagada o no está pendiente de pago.");
             }
         }
 
@@ -94,6 +107,22 @@ public class PagoService {
                             "Monto: Q" + request.getMonto() + "\n" +
                             "Metodo de pago: " + metodoPago + "\n" +
                             "Numero de transaccion: " + guardado.getNumeroTransaccion() + "\n\n" +
+                            "Sistema Medico 2026"
+            );
+        } else if (orden != null) {
+            orden.setEstado(OrdenLaboratorio.EstadoOrden.EN_PROCESO);
+            ordenLaboratorioRepository.save(orden);
+
+            notificacionService.enviar(
+                    "Comprobante de Pago",
+                    orden.getPaciente().getCorreo(),
+                    "Comprobante de pago de laboratorio - Sistema Medico",
+                    "Hola " + orden.getPaciente().getNombreCompleto() + ",\n\n" +
+                            "Hemos recibido el pago de tu orden de laboratorio.\n" +
+                            "Monto: Q" + request.getMonto() + "\n" +
+                            "Metodo de pago: " + metodoPago + "\n" +
+                            "Numero de transaccion: " + guardado.getNumeroTransaccion() + "\n\n" +
+                            "Tu orden ahora está en proceso.\n\n" +
                             "Sistema Medico 2026"
             );
         }

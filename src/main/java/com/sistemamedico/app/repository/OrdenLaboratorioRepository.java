@@ -8,4 +8,5 @@ import java.util.List;
 public interface OrdenLaboratorioRepository extends JpaRepository<OrdenLaboratorio, Long> {
     List<OrdenLaboratorio> findByPacienteDpi(String dpi);
     List<OrdenLaboratorio> findByEstado(OrdenLaboratorio.EstadoOrden estado);
+    List<OrdenLaboratorio> findByPacienteDpiAndEstado(String dpi, OrdenLaboratorio.EstadoOrden estado);
 }

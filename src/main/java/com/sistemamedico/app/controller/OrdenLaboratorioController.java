@@ -7,6 +7,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/ordenes-laboratorio")
 public class OrdenLaboratorioController {
@@ -25,6 +27,11 @@ public class OrdenLaboratorioController {
     @GetMapping("/{id}")
     public ResponseEntity<OrdenLaboratorioResponse> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(ordenLaboratorioService.buscarPorId(id));
+    }
+
+    @GetMapping("/pendientes/{dpi}")
+    public ResponseEntity<List<OrdenLaboratorioResponse>> buscarPendientesPorDpi(@PathVariable String dpi) {
+        return ResponseEntity.ok(ordenLaboratorioService.buscarPendientesPorDpi(dpi));
     }
 
     @PostMapping("/resultados")

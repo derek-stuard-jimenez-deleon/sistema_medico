@@ -73,6 +73,13 @@ public class OrdenLaboratorioService {
         return mapearAResponse(orden, detalles);
     }
 
+    public List<OrdenLaboratorioResponse> buscarPendientesPorDpi(String dpi) {
+        return ordenLaboratorioRepository.findByPacienteDpiAndEstado(dpi, OrdenLaboratorio.EstadoOrden.PENDIENTE)
+                .stream()
+                .map(orden -> mapearAResponse(orden, detalleOrdenLaboratorioRepository.findByOrdenId(orden.getId())))
+                .toList();
+    }
+
     // Registrar un resultado individual (dentro del detalle de una orden)
     @Transactional
     public ResultadoLaboratorioResponse registrarResultado(ResultadoLaboratorioRequest request) {
