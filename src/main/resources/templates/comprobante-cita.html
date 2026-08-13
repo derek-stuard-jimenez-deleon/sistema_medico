@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Comprobante de Cita - Sistema Médico</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link th:href="@{/css/estilos.css}" rel="stylesheet">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main class="container mt-4" th:if="${pago != null and cita != null}">
+    <div class="card card-panel p-4 mx-auto" style="max-width: 720px;">
+        <!-- Encabezado del Comprobante -->
+        <div class="text-center border-bottom pb-3 mb-3">
+            <i class="bi bi-check-circle-fill text-success fs-1"></i>
+            <h4 class="fw-bold mt-2">¡Pago de cita registrado!</h4>
+            <p class="text-muted mb-0">La cita ha sido confirmada.</p>
+        </div>
+
+        <!-- Detalles del Pago y la Cita -->
+        <dl class="row mb-0">
+            <dt class="col-sm-5">Transacción</dt>
+            <dd class="col-sm-7" th:text="${pago.numeroTransaccion}"></dd>
+
+            <dt class="col-sm-5">Fecha y hora</dt>
+            <dd class="col-sm-7" th:text="${#temporals.format(pago.fechaHora, 'dd/MM/yyyy HH:mm')}"></dd>
+
+            <dt class="col-sm-5">Paciente</dt>
+            <dd class="col-sm-7" th:text="${cita.pacienteNombre}"></dd>
+
+            <dt class="col-sm-5">DPI</dt>
+            <dd class="col-sm-7" th:text="${cita.pacienteDpi}"></dd>
+
+            <dt class="col-sm-5">Cita</dt>
+            <dd class="col-sm-7" th:text="'#' + ${cita.id}"></dd>
+
+            <dt class="col-sm-5">Médico</dt>
+            <dd class="col-sm-7" th:text="${cita.medicoNombre}"></dd>
+
+            <dt class="col-sm-5">Especialidad</dt>
+            <dd class="col-sm-7" th:text="${cita.especialidadNombre}"></dd>
+
+            <dt class="col-sm-5">Método de pago</dt>
+            <dd class="col-sm-7" th:text="${pago.metodoPago}"></dd>
+
+            <dt class="col-sm-5" th:if="${pago.montoRecibido != null}">Monto recibido</dt>
+            <dd class="col-sm-7" th:if="${pago.montoRecibido != null}" th:text="'Q' + ${#numbers.formatDecimal(pago.montoRecibido, 1, 2)}"></dd>
+
+            <dt class="col-sm-5" th:if="${pago.cambio != null}">Cambio</dt>
+            <dd class="col-sm-7" th:if="${pago.cambio != null}" th:text="'Q' + ${#numbers.formatDecimal(pago.cambio, 1, 2)}"></dd>
+
+            <dt class="col-sm-5">Total pagado</dt>
+            <dd class="col-sm-7 fw-bold" th:text="'Q' + ${#numbers.formatDecimal(pago.monto, 1, 2)}"></dd>
+        </dl>
+
+        <!-- Botones de Acción -->
+        <div class="border-top pt-3 mt-3 d-flex gap-2 justify-content-end no-print">
+            <a th:href="@{/caja/citas}" class="btn btn-outline-secondary"><i class="bi bi-plus-circle"></i> Nuevo cobro</a>
+            <button type="button" class="btn btn-sistema" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button>
+        </div>
+    </div>
+</main>
+
+<!-- Mensaje por si se accede sin datos -->
+<main class="container mt-4" th:unless="${pago != null and cita != null}">
+    <div class="alert alert-warning">No hay un comprobante de pago para mostrar.</div>
+    <a th:href="@{/caja/citas}" class="btn btn-sistema">Volver a caja</a>
+</main>
+
+<style>
+    @media print {
+        .navbar, .no-print {
+            display: none !important;
+        }
+        body {
+            background: #fff;
+        }
+    }
+</style>
+</body>
+</html>

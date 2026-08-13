@@ -80,6 +80,15 @@ public class OrdenLaboratorioService {
                 .toList();
     }
 
+    public OrdenLaboratorioResponse buscarPendientePorId(Long id) {
+        OrdenLaboratorio orden = ordenLaboratorioRepository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Orden de laboratorio no encontrada."));
+        if (orden.getEstado() != OrdenLaboratorio.EstadoOrden.PENDIENTE) {
+            throw new IllegalArgumentException("La orden indicada no está pendiente de pago.");
+        }
+        return mapearAResponse(orden, detalleOrdenLaboratorioRepository.findByOrdenId(orden.getId()));
+    }
+
     // Registrar un resultado individual (dentro del detalle de una orden)
     @Transactional
     public ResultadoLaboratorioResponse registrarResultado(ResultadoLaboratorioRequest request) {
@@ -131,9 +140,11 @@ public class OrdenLaboratorioService {
         OrdenLaboratorioResponse dto = new OrdenLaboratorioResponse();
         dto.setId(orden.getId());
         dto.setPacienteNombre(orden.getPaciente().getNombreCompleto());
+        dto.setPacienteDpi(orden.getPaciente().getDpi());
         dto.setMedicoNombre(orden.getMedico().getNombreCompleto());
         dto.setEstado(orden.getEstado().name());
         dto.setMontoTotal(orden.getMontoTotal());
+        dto.setFechaCreacion(orden.getFechaCreacion());
         dto.setDetalles(detalles.stream().map(det -> {
             DetalleOrdenLaboratorioResponse d = new DetalleOrdenLaboratorioResponse();
             d.setId(det.getId());

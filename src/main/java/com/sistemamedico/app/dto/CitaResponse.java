@@ -14,6 +14,7 @@ public class CitaResponse {
     private String motivoVisita;
     private String estado;
     private String tipo;
+    private boolean verificada;
 
     // --- Getters y setters ---
     public Long getId() { return id; }
@@ -36,4 +37,6 @@ public class CitaResponse {
     public void setEstado(String estado) { this.estado = estado; }
     public String getTipo() { return tipo; }
     public void setTipo(String tipo) { this.tipo = tipo; }
+    public boolean isVerificada() { return verificada; }
+    public void setVerificada(boolean verificada) { this.verificada = verificada; }
 }

@@ -53,9 +53,15 @@ public class Cita extends BaseEntity {
     @Column(name = "reserva_expira_en")
     private LocalDateTime reservaExpiraEn;
 
+    @Column(name = "verificada")
+    private boolean verificada = false;
+
     public enum EstadoCita {
         RESERVADA, PENDIENTE_PAGO, PAGADA, CANCELADA, ATENDIDA
     }
+
+    public Boolean isVerificada() { return verificada; }
+    public void setVerificada(Boolean verificada) { this.verificada = verificada; }
 
     public enum TipoCita {
         NORMAL, SEGUIMIENTO

@@ -130,6 +130,19 @@ public class CitaService {
         citaRepository.save(cita);
     }
 
+    @Transactional
+    public CitaResponse marcarVerificada(Long id) {
+        Cita cita = citaRepository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Cita no encontrada."));
+
+        if (cita.getEstado() == Cita.EstadoCita.CANCELADA) {
+            throw new IllegalArgumentException("No se puede verificar una cita cancelada.");
+        }
+
+        cita.setVerificada(true);
+        return mapearAResponse(citaRepository.save(cita));
+    }
+
     private CitaResponse mapearAResponse(Cita cita) {
         CitaResponse dto = new CitaResponse();
         dto.setId(cita.getId());
@@ -142,6 +155,7 @@ public class CitaService {
         dto.setMotivoVisita(cita.getMotivoVisita());
         dto.setEstado(cita.getEstado().name());
         dto.setTipo(cita.getTipo().name());
+        dto.setVerificada(cita.isVerificada());
         return dto;
     }
 }
