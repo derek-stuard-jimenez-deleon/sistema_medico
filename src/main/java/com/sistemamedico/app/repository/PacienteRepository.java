@@ -14,4 +14,6 @@ public interface PacienteRepository extends JpaRepository<Paciente, Long> {
     boolean existsByDpi(String dpi);
 
     boolean existsByCorreo(String correo);
+
+    boolean existsByUsername(String username);
 }

@@ -4,8 +4,10 @@ import com.sistemamedico.app.dto.MovimientoInventarioResponse;
 import com.sistemamedico.app.model.MovimientoInventario;
 import com.sistemamedico.app.repository.MovimientoInventarioRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class MovimientoInventarioService {
@@ -16,25 +18,24 @@ public class MovimientoInventarioService {
         this.movimientoInventarioRepository = movimientoInventarioRepository;
     }
 
+    @Transactional(readOnly = true)
     public List<MovimientoInventarioResponse> listarTodos() {
-        return movimientoInventarioRepository.findAllByOrderByFechaCreacionDesc()
-                .stream().map(this::mapearAResponse).toList();
-    }
-
-    public List<MovimientoInventarioResponse> listarPorMedicamentoYSucursal(Long medicamentoId, Long sucursalId) {
-        return movimientoInventarioRepository
-                .findByMedicamentoIdAndSucursalIdOrderByFechaCreacionDesc(medicamentoId, sucursalId)
-                .stream().map(this::mapearAResponse).toList();
+        return movimientoInventarioRepository.findAllWithDetails()
+                .stream()
+                .map(this::mapearAResponse)
+                .collect(Collectors.toList());
     }
 
     private MovimientoInventarioResponse mapearAResponse(MovimientoInventario movimiento) {
         MovimientoInventarioResponse dto = new MovimientoInventarioResponse();
         dto.setId(movimiento.getId());
+        dto.setTipo(movimiento.getTipoMovimiento().name()); // Corregido
         dto.setMedicamentoNombre(movimiento.getMedicamento().getNombre());
         dto.setSucursalNombre(movimiento.getSucursal().getNombre());
-        dto.setTipoMovimiento(movimiento.getTipoMovimiento().name());
         dto.setCantidad(movimiento.getCantidad());
-        dto.setMotivo(movimiento.getMotivo());
+        dto.setStockAnterior(movimiento.getStockAnterior());
+        dto.setStockNuevo(movimiento.getStockNuevo());
+        dto.setReferencia(movimiento.getReferencia());
         dto.setUsuarioNombre(movimiento.getUsuario().getNombreCompleto());
         dto.setFechaCreacion(movimiento.getFechaCreacion());
         return dto;

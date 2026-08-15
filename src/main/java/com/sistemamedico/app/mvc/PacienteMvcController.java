@@ -47,7 +47,7 @@ public class PacienteMvcController {
         }
 
         try {
-            pacienteService.crear(pacienteRequest);
+            pacienteService.crearPaciente(pacienteRequest); // Corregido
         } catch (IllegalArgumentException e) {
             model.addAttribute("errorNegocio", e.getMessage());
             return "paciente-form";

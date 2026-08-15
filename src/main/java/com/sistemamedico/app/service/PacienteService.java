@@ -5,6 +5,7 @@ import com.sistemamedico.app.dto.PacienteResponse;
 import com.sistemamedico.app.exception.RecursoNoEncontradoException;
 import com.sistemamedico.app.model.Paciente;
 import com.sistemamedico.app.repository.PacienteRepository;
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,12 +24,15 @@ public class PacienteService {
     }
 
     @Transactional
-    public PacienteResponse crear(PacienteRequest request) {
+    public PacienteResponse crearPaciente(PacienteRequest request) {
         if (pacienteRepository.existsByDpi(request.getDpi())) {
             throw new IllegalArgumentException("El DPI ingresado ya se encuentra registrado.");
         }
         if (pacienteRepository.existsByCorreo(request.getCorreo())) {
             throw new IllegalArgumentException("El correo ingresado ya se encuentra registrado.");
+        }
+        if (pacienteRepository.existsByUsername(request.getUsername())) {
+            throw new IllegalArgumentException("El nombre de usuario ya está en uso. Por favor, elija otro.");
         }
 
         Paciente paciente = new Paciente();
@@ -56,6 +60,8 @@ public class PacienteService {
                 .orElseThrow(() -> new RecursoNoEncontradoException("Paciente no encontrado."));
         return mapearAResponse(paciente);
     }
+
+
 
     public Page<PacienteResponse> listarTodos(Pageable pageable) {
         return pacienteRepository.findAll(pageable).map(this::mapearAResponse);

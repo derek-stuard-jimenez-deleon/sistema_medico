@@ -11,6 +11,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List; // Importar List
+import java.util.stream.Collectors; // Importar Collectors
+
 @Service
 public class UsuarioService {
 
@@ -76,20 +79,32 @@ public class UsuarioService {
     }
 
     public UsuarioResponse buscarPorId(Long id) {
-        Usuario usuario = usuarioRepository.findById(id)
+        // Usamos el nuevo método del repositorio para cargar la especialidad y sucursal eager
+        Usuario usuario = usuarioRepository.findByIdWithEagerRelations(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado."));
         return mapearAResponse(usuario);
     }
 
     // RN-CU01-01 / RN-CU01-02: busqueda por nombre con paginacion (20/pagina se configura en el Controller)
     public Page<UsuarioResponse> buscarPorNombre(String nombre, Pageable pageable) {
-        return usuarioRepository.findByNombreCompletoContainingIgnoreCase(nombre, pageable)
+        return usuarioRepository.findByUsernameContaining(nombre, pageable)
                 .map(this::mapearAResponse);
     }
 
     public Page<UsuarioResponse> listarTodos(Pageable pageable) {
         return usuarioRepository.findAll(pageable).map(this::mapearAResponse);
     }
+
+    // Nuevo método para listar médicos por especialidad
+    public List<UsuarioResponse> listarMedicosPorEspecialidad(Long especialidadId) {
+        // Asumo que tienes un método en UsuarioRepository para buscar usuarios por rol y especialidad
+        // O que el rol "Medico" se puede filtrar aquí
+        return usuarioRepository.findByRolNombreAndEspecialidadId("Medico", especialidadId)
+                .stream()
+                .map(this::mapearAResponse)
+                .collect(Collectors.toList());
+    }
+
 
     @Transactional
     public UsuarioResponse actualizar(Long id, UsuarioRequest request) {
@@ -135,6 +150,7 @@ public class UsuarioService {
         dto.setTelefono(usuario.getTelefono());
         dto.setNumeroSeguro(usuario.getNumeroSeguro());
         dto.setRolNombre(usuario.getRol().getNombre());
+        dto.setSucursalId(usuario.getSucursal().getId()); // Asignar sucursalId
         dto.setSucursalNombre(usuario.getSucursal().getNombre());
         dto.setEspecialidadNombre(usuario.getEspecialidad() != null ? usuario.getEspecialidad().getNombre() : null);
         dto.setActivo(usuario.isActivo());

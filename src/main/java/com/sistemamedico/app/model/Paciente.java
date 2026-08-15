@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.SQLRestriction;
 import com.sistemamedico.app.model.base.BaseEntity;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "pacientes")
 @SQLRestriction("eliminado = false")
@@ -33,6 +35,13 @@ public class Paciente extends BaseEntity {
     @Column(nullable = false)
     private boolean activo = true;
 
+    @Column(name = "intentos_fallidos", nullable = false)
+    private Integer intentosFallidos = 0;
+
+    @Column(name = "bloqueado_hasta")
+    private LocalDateTime bloqueadoHasta;
+
+    // --- Getters y setters ---
     public String getDpi() { return dpi; }
     public void setDpi(String dpi) { this.dpi = dpi; }
     public String getNombreCompleto() { return nombreCompleto; }
@@ -49,4 +58,8 @@ public class Paciente extends BaseEntity {
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
     public boolean isActivo() { return activo; }
     public void setActivo(boolean activo) { this.activo = activo; }
+    public Integer getIntentosFallidos() { return intentosFallidos; }
+    public void setIntentosFallidos(Integer intentosFallidos) { this.intentosFallidos = intentosFallidos; }
+    public LocalDateTime getBloqueadoHasta() { return bloqueadoHasta; }
+    public void setBloqueadoHasta(LocalDateTime bloqueadoHasta) { this.bloqueadoHasta = bloqueadoHasta; }
 }

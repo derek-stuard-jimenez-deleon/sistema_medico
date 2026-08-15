@@ -16,9 +16,10 @@
         <h2 class="text-center mb-1 fw-bold">Sistema Medico 2026</h2>
         <p class="text-center text-muted mb-4">Inicia sesión para continuar</p>
 
-        <div class="alert alert-danger d-flex align-items-center gap-2" th:if="${param.error}">
+        <!-- Bloque de Alerta de Error Modificado -->
+        <div class="alert alert-danger d-flex align-items-center gap-2" th:if="${errorMessage != null}">
             <i class="bi bi-exclamation-triangle-fill"></i>
-            Usuario o contraseña incorrectos.
+            <span th:text="${errorMessage}"></span>
         </div>
 
         <form th:action="@{/login}" method="post">

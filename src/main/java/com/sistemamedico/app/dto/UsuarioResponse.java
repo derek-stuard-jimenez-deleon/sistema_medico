@@ -10,6 +10,7 @@ public class UsuarioResponse {
     private String telefono;
     private String numeroSeguro;
     private String rolNombre;
+    private Long sucursalId; // Añadido
     private String sucursalNombre;
     private String especialidadNombre;
     private boolean activo;
@@ -31,6 +32,8 @@ public class UsuarioResponse {
     public void setNumeroSeguro(String numeroSeguro) { this.numeroSeguro = numeroSeguro; }
     public String getRolNombre() { return rolNombre; }
     public void setRolNombre(String rolNombre) { this.rolNombre = rolNombre; }
+    public Long getSucursalId() { return sucursalId; } // Getter para sucursalId
+    public void setSucursalId(Long sucursalId) { this.sucursalId = sucursalId; } // Setter para sucursalId
     public String getSucursalNombre() { return sucursalNombre; }
     public void setSucursalNombre(String sucursalNombre) { this.sucursalNombre = sucursalNombre; }
     public String getEspecialidadNombre() { return especialidadNombre; }

@@ -27,27 +27,31 @@
                 <th>Sucursal</th>
                 <th>Tipo</th>
                 <th>Cantidad</th>
-                <th>Motivo</th>
+                <th>Stock Anterior</th>
+                <th>Stock Nuevo</th>
                 <th>Usuario</th>
+                <th>Referencia</th>
             </tr>
             </thead>
             <tbody>
             <tr th:each="mov : ${movimientos}">
-                <td th:text="${mov.fechaCreacion}"></td>
+                <td th:text="${#temporals.format(mov.fechaCreacion, 'dd/MM/yyyy HH:mm')}"></td>
                 <td th:text="${mov.medicamentoNombre}"></td>
                 <td th:text="${mov.sucursalNombre}"></td>
                 <td>
-                            <span class="badge badge-estado"
-                                  th:classappend="${mov.tipoMovimiento == 'ENTRADA_COMPRA'} ? 'bg-success' : 'bg-danger'"
-                                  th:text="${mov.tipoMovimiento}">
-                            </span>
+                    <span class="badge"
+                          th:classappend="${#strings.contains(mov.tipo, 'ENTRADA')} ? 'bg-success' : 'bg-danger'"
+                          th:text="${mov.tipo}">
+                    </span>
                 </td>
                 <td th:text="${mov.cantidad}"></td>
-                <td th:text="${mov.motivo}"></td>
+                <td th:text="${mov.stockAnterior}"></td>
+                <td th:text="${mov.stockNuevo}"></td>
                 <td th:text="${mov.usuarioNombre}"></td>
+                <td th:text="${mov.referencia}"></td>
             </tr>
             <tr th:if="${#lists.isEmpty(movimientos)}">
-                <td colspan="7" class="text-center text-muted py-4">No hay movimientos registrados.</td>
+                <td colspan="9" class="text-center text-muted py-4">No hay movimientos registrados.</td>
             </tr>
             </tbody>
         </table>

@@ -8,7 +8,12 @@ import com.sistemamedico.app.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class CitaService {
@@ -65,9 +70,9 @@ public class CitaService {
             throw new IllegalArgumentException("La especialidad seleccionada no está disponible en esta sucursal.");
         }
 
-        boolean tieneChoque = citaRepository.findByMedicoIdAndEstado(medico.getId(), Cita.EstadoCita.RESERVADA)
-                .stream().anyMatch(c -> c.getFechaHora().equals(request.getFechaHora()));
-        if (tieneChoque) {
+        // Verificar disponibilidad de horario real
+        List<LocalTime> horariosOcupados = buscarHorariosOcupados(medico.getId(), request.getFechaHora().toLocalDate());
+        if (horariosOcupados.contains(request.getFechaHora().toLocalTime())) {
             throw new IllegalArgumentException("El médico ya tiene una cita reservada en ese horario.");
         }
 
@@ -112,6 +117,17 @@ public class CitaService {
 
     public List<CitaResponse> listarTodas() {
         return citaRepository.findAll().stream().map(this::mapearAResponse).toList();
+    }
+
+    // Nuevo método para buscar horarios ocupados de un médico en una fecha
+    public List<LocalTime> buscarHorariosOcupados(Long medicoId, LocalDate fecha) {
+        LocalDateTime startOfDay = fecha.atStartOfDay();
+        LocalDateTime endOfDay = fecha.atTime(LocalTime.MAX); // Fin del día
+
+        return citaRepository.findByMedicoIdAndFechaHoraBetween(medicoId, startOfDay, endOfDay)
+                .stream()
+                .map(cita -> cita.getFechaHora().toLocalTime())
+                .collect(Collectors.toList());
     }
 
     @Transactional

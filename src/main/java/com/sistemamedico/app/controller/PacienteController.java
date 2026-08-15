@@ -23,7 +23,7 @@ public class PacienteController {
 
     @PostMapping
     public ResponseEntity<PacienteResponse> crear(@Valid @RequestBody PacienteRequest request) {
-        PacienteResponse creado = pacienteService.crear(request);
+        PacienteResponse creado = pacienteService.crearPaciente(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(creado);
     }
 

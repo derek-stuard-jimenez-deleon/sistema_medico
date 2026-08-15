@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 
 public class CitaRequest {
 
-    @NotNull(message = "Debe indicar el paciente.")
+    // @NotNull(message = "Debe indicar el paciente.") // Eliminado
     private Long pacienteId;
 
     @NotNull(message = "Debe indicar el médico.")
@@ -18,14 +18,13 @@ public class CitaRequest {
     @NotNull(message = "Debe indicar la especialidad.")
     private Long especialidadId;
 
-    @NotNull(message = "Debe indicar la sucursal.")
+    // @NotNull(message = "Debe indicar la sucursal.") // Eliminado
     private Long sucursalId;
 
     @NotNull(message = "Debe indicar la fecha y hora de la cita.")
     @Future(message = "La fecha de la cita debe ser futura.")
     private LocalDateTime fechaHora;
 
-    @NotBlank(message = "El motivo de la visita es obligatorio.")
     @Size(max = 2000, message = "El motivo no puede exceder 2000 caracteres.")
     private String motivoVisita;
 

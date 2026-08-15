@@ -24,16 +24,24 @@ public class MovimientoInventario extends BaseEntity {
     @Column(nullable = false)
     private Integer cantidad;
 
+    @Column(name = "stock_anterior", nullable = false)
+    private Integer stockAnterior;
+
+    @Column(name = "stock_nuevo", nullable = false)
+    private Integer stockNuevo;
+
+    @Column(length = 200)
+    private String referencia; // Para Nro de factura, despacho, etc.
+
     @Column(nullable = false, length = 1000)
     private String motivo;
 
-    // El usuario que realizo el movimiento (ademas de creadoPor heredado, explicito aqui por claridad de negocio)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "usuario_id")
     private Usuario usuario;
 
     public enum TipoMovimiento {
-        ENTRADA_COMPRA, SALIDA_AJUSTE, TRANSFERENCIA, AJUSTE_INVENTARIO_FISICO
+        ENTRADA_COMPRA, SALIDA_AJUSTE, TRANSFERENCIA, AJUSTE_INVENTARIO_FISICO, VENTA, DESPACHO
     }
 
     // --- Getters y setters ---
@@ -45,6 +53,12 @@ public class MovimientoInventario extends BaseEntity {
     public void setTipoMovimiento(TipoMovimiento tipoMovimiento) { this.tipoMovimiento = tipoMovimiento; }
     public Integer getCantidad() { return cantidad; }
     public void setCantidad(Integer cantidad) { this.cantidad = cantidad; }
+    public Integer getStockAnterior() { return stockAnterior; }
+    public void setStockAnterior(Integer stockAnterior) { this.stockAnterior = stockAnterior; }
+    public Integer getStockNuevo() { return stockNuevo; }
+    public void setStockNuevo(Integer stockNuevo) { this.stockNuevo = stockNuevo; }
+    public String getReferencia() { return referencia; }
+    public void setReferencia(String referencia) { this.referencia = referencia; }
     public String getMotivo() { return motivo; }
     public void setMotivo(String motivo) { this.motivo = motivo; }
     public Usuario getUsuario() { return usuario; }
