@@ -27,7 +27,7 @@ public class CitaSchedulerService {
      * después de un tiempo determinado (ej. 5 minutos).
      * Se ejecuta cada minuto.
      */
-    @Scheduled(fixedRate = 1, timeUnit = TimeUnit.MINUTES) // Ejecutar cada minuto
+    @Scheduled(fixedRate = 20, timeUnit = TimeUnit.SECONDS) // Ejecutar cada 20 SEGUNDOS
     @Transactional
     public void eliminarCitasExpiradas() { // Renombrado el método para reflejar la acción
         logger.info("Iniciando tarea programada: eliminación de citas expiradas.");
