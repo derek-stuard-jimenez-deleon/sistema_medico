@@ -22,7 +22,8 @@
         </div>
     </div>
 
-    <!-- Alerta de Error -->
+    <!-- Alerta de Éxito o Error -->
+    <div class="alert alert-success" th:if="${mensajeExito}" th:text="${mensajeExito}"></div>
     <div class="alert alert-danger" th:if="${error}" th:text="${error}"></div>
 
     <!-- Tabla de Resultados -->
@@ -36,7 +37,7 @@
                 <th>Especialidad</th>
                 <th>Fecha y Hora</th>
                 <th>Estado</th>
-                <th></th>
+                <th>Acciones</th>
             </tr>
             </thead>
             <tbody>
@@ -47,16 +48,27 @@
                 <td th:text="${#temporals.format(cita.fechaHora, 'dd/MM/yyyy HH:mm')}"></td>
                 <td>
                     <span class="badge"
-                          th:classappend="${#strings.equals(cita.estado, 'PAGADA')} ? 'bg-success' :
-                                         (${#strings.equals(cita.estado, 'RESERVADA')} ? 'bg-warning text-dark' :
-                                         (${#strings.equals(cita.estado, 'CANCELADA')} ? 'bg-danger' : 'bg-info'))"
+                          th:classappend="${#strings.equals(cita.estado, 'PAGADA')} ? 'bg-success' : (${#strings.equals(cita.estado, 'RESERVADA')} ? 'bg-warning text-dark' : (${#strings.equals(cita.estado, 'CANCELADA')} ? 'bg-danger' : (${#strings.equals(cita.estado, 'REAGENDADA')} ? 'bg-primary' : (${#strings.equals(cita.estado, 'PENDIENTE_PAGO')} ? 'bg-info' : (${#strings.equals(cita.estado, 'ATENDIDA')} ? 'bg-secondary' : 'bg-light text-dark')))))"
                           th:text="${cita.estado}">
                     </span>
                 </td>
                 <td>
-                    <!-- Acciones futuras como cancelar/reagendar -->
-                    <button class="btn btn-sm btn-outline-secondary" disabled><i class="bi bi-pencil"></i></button>
-                    <button class="btn btn-sm btn-outline-danger ms-1" disabled><i class="bi bi-x-circle"></i></button>
+                    <!-- Botón de Cancelar -->
+                    <form th:action="@{/paciente/portal/citas/cancelar/{id}(id=${cita.id})}" method="post" style="display:inline;">
+                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                th:disabled="${(!#strings.equals(cita.estado, 'RESERVADA') && !#strings.equals(cita.estado, 'REAGENDADA')) || cita.fechaHora.isBefore(#temporals.createNow())}"
+                                onclick="return confirm('¿Está seguro que desea cancelar esta cita?');">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </button>
+                    </form>
+                    <!-- Botón de Reagendar (MODIFICADO) -->
+                    <a th:href="@{/paciente/portal/citas/reagendar/{id}(id=${cita.id})}"
+                       class="btn btn-sm btn-outline-secondary ms-1"
+                       th:classappend="${!#strings.equals(cita.estado, 'RESERVADA') || cita.fechaHora.isBefore(#temporals.createNow()) ? 'disabled' : ''}"
+                       th:attr="aria-disabled=${!#strings.equals(cita.estado, 'RESERVADA') || cita.fechaHora.isBefore(#temporals.createNow()) ? 'true' : 'false'}"
+                       tabindex="${!#strings.equals(cita.estado, 'RESERVADA') || cita.fechaHora.isBefore(#temporals.createNow()) ? '-1' : '0'}">
+                        <i class="bi bi-pencil"></i> Reagendar
+                    </a>
                 </td>
             </tr>
             <tr th:if="${#lists.isEmpty(citas)}">
@@ -69,3 +81,4 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
+</html>

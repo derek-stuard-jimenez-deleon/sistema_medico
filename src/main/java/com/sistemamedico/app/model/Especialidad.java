@@ -24,4 +24,9 @@ public class Especialidad extends BaseEntity {
     public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
     public boolean isActivo() { return activo; }
     public void setActivo(boolean activo) { this.activo = activo; }
+
+    // Added to resolve "Cannot resolve method 'getEspecialidadNombre' in 'Especialidad'"
+    public String getEspecialidadNombre() {
+        return this.nombre;
+    }
 }

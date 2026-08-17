@@ -1,6 +1,7 @@
 package com.sistemamedico.app.repository;
 
 import com.sistemamedico.app.model.Cita;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDateTime;
@@ -13,4 +14,22 @@ public interface CitaRepository extends JpaRepository<Cita, Long> {
 
     // Nuevo método para buscar citas de un médico en un rango de fechas (un día)
     List<Cita> findByMedicoIdAndFechaHoraBetween(Long medicoId, LocalDateTime startOfDay, LocalDateTime endOfDay);
+
+    // Nuevo método para buscar citas por DPI y una lista de estados, ordenadas por ID ascendente
+    @EntityGraph(attributePaths = {"paciente", "medico", "especialidad", "sucursal"})
+    List<Cita> findByPacienteDpiAndEstadoInOrderByIdAsc(String dpi, List<Cita.EstadoCita> estados);
+
+    // Nuevo método para buscar citas por DPI y una lista de estados, ordenadas por ID descendente
+    @EntityGraph(attributePaths = {"paciente", "medico", "especialidad", "sucursal"})
+    List<Cita> findByPacienteDpiAndEstadoInOrderByIdDesc(String dpi, List<Cita.EstadoCita> estados);
+
+    // Nuevo método para buscar citas de un médico en un rango de fechas, excluyendo una cita específica
+    List<Cita> findByMedicoIdAndFechaHoraBetweenAndIdNot(Long medicoId, LocalDateTime startOfDay, LocalDateTime endOfDay, Long id);
+
+    // Nuevo método para buscar citas por DPI y una lista de estados, ordenadas por fecha y hora ascendente
+    @EntityGraph(attributePaths = {"paciente", "medico", "especialidad", "sucursal"})
+    List<Cita> findByPacienteDpiAndEstadoInOrderByFechaHoraAsc(String dpi, List<Cita.EstadoCita> estados);
+
+    // Método para listar todas las citas ordenadas por ID descendente
+    List<Cita> findAllByOrderByIdDesc();
 }

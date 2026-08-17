@@ -4,6 +4,7 @@ import com.sistemamedico.app.dto.CitaRequest; // Importar CitaRequest
 import com.sistemamedico.app.dto.CitaResponse;
 import com.sistemamedico.app.dto.UsuarioResponse;
 import com.sistemamedico.app.exception.RecursoNoEncontradoException;
+import com.sistemamedico.app.model.Cita; // Importar Cita para EstadoCita
 import com.sistemamedico.app.model.Paciente; // Importar Paciente
 import com.sistemamedico.app.repository.PacienteRepository; // Importar PacienteRepository
 import com.sistemamedico.app.service.CitaService;
@@ -16,6 +17,7 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult; // Importar BindingResult
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute; // Importar @ModelAttribute
+import org.springframework.web.bind.annotation.PathVariable; // Importar @PathVariable
 import org.springframework.web.bind.annotation.PostMapping; // Importar @PostMapping
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -95,8 +97,9 @@ public class PacientePortalController {
 
         // Mover la asignación de pacienteId y sucursalId aquí, antes de la validación del formulario
         String username = authentication.getName();
+        Paciente paciente = null; // Declarar paciente aquí
         try {
-            Paciente paciente = pacienteRepository.findByUsername(username)
+            paciente = pacienteRepository.findByUsername(username)
                     .orElseThrow(() -> new RecursoNoEncontradoException("Paciente no encontrado para el usuario: " + username));
             citaRequest.setPacienteId(paciente.getId());
             logger.debug("PacienteId asignado a citaRequest: {}", citaRequest.getPacienteId());
@@ -128,7 +131,7 @@ public class PacientePortalController {
             model.addAttribute("citaRequest", citaRequest);
             return "paciente-agendar-cita";
         }
-
+        
         logger.debug("Fecha y Hora de la cita: {}", citaRequest.getFechaHora());
 
         try {
@@ -156,6 +159,145 @@ public class PacientePortalController {
         }
     }
 
+    @PostMapping("/citas/cancelar/{id}")
+    public String cancelarCita(@PathVariable Long id, Authentication authentication, RedirectAttributes redirectAttributes) {
+        String username = authentication.getName();
+        logger.info("Intento de cancelación de cita {} por el usuario {}", id, username);
+
+        try {
+            Paciente paciente = pacienteRepository.findByUsername(username)
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Paciente no encontrado para el usuario: " + username));
+
+            // Llama al servicio para cancelar la cita, pasando el ID de la cita y el ID del paciente para verificar propiedad
+            citaService.cancelarCita(id, paciente.getId());
+
+            redirectAttributes.addFlashAttribute("mensajeExito", "Cita #" + id + " cancelada exitosamente.");
+            return "redirect:/paciente/portal/citas";
+
+        } catch (RecursoNoEncontradoException | IllegalArgumentException e) {
+            logger.error("Error al cancelar cita {}: {}", id, e.getMessage());
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+            return "redirect:/paciente/portal/citas";
+        } catch (Exception e) {
+            logger.error("Error inesperado al cancelar cita {}: {}", id, e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("error", "Ocurrió un error inesperado al cancelar la cita.");
+            return "redirect:/paciente/portal/citas";
+        }
+    }
+
+    @GetMapping("/citas/reagendar/{id}")
+    public String mostrarFormularioReagendarCita(@PathVariable Long id, Authentication authentication, Model model, RedirectAttributes redirectAttributes) {
+        String username = authentication.getName();
+        logger.info("Mostrando formulario de reagendamiento para cita {} por el usuario {}", id, username);
+
+        try {
+            Paciente paciente = pacienteRepository.findByUsername(username)
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Paciente no encontrado para el usuario: " + username));
+
+            CitaResponse citaOriginal = citaService.buscarPorId(id);
+
+            // Verificar que la cita pertenezca al paciente
+            if (!citaOriginal.getPacienteDpi().equals(paciente.getDpi())) {
+                throw new IllegalArgumentException("No tiene permisos para reagendar esta cita.");
+            }
+            // Verificar que la cita esté en estado reagendable (RESERVADA) y sea futura
+            if (!citaOriginal.getEstado().equals(Cita.EstadoCita.RESERVADA.name()) || citaOriginal.getFechaHora().isBefore(LocalDateTime.now())) {
+                throw new IllegalArgumentException("Solo se pueden reagendar citas futuras en estado RESERVADA.");
+            }
+
+            // Pre-llenar el CitaRequest con los datos de la cita original
+            CitaRequest citaRequest = new CitaRequest();
+            citaRequest.setEspecialidadId(citaOriginal.getEspecialidadId()); // Corregido
+            citaRequest.setMedicoId(citaOriginal.getMedicoId()); // Corregido
+            citaRequest.setMotivoVisita(citaOriginal.getMotivoVisita());
+            // La fecha y hora se seleccionarán de nuevo, no se pre-llenan directamente en el request
+
+            model.addAttribute("citaRequest", citaRequest);
+            model.addAttribute("citaOriginalId", id); // Para saber qué cita estamos reagendando
+            model.addAttribute("especialidades", especialidadService.listarTodos());
+
+            return "paciente-agendar-cita"; // Reutilizamos el mismo formulario
+        } catch (RecursoNoEncontradoException | IllegalArgumentException e) {
+            logger.error("Error al mostrar formulario de reagendamiento para cita {}: {}", id, e.getMessage());
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+            return "redirect:/paciente/portal/citas";
+        } catch (Exception e) {
+            logger.error("Error inesperado al mostrar formulario de reagendamiento para cita {}: {}", id, e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("error", "Ocurrió un error inesperado al mostrar el formulario de reagendamiento.");
+            return "redirect:/paciente/portal/citas";
+        }
+    }
+
+    @PostMapping("/citas/reagendar/{id}") // Nuevo método para procesar el reagendamiento
+    public String procesarReagendarCita(@PathVariable Long id,
+                                        @Valid @ModelAttribute("citaRequest") CitaRequest citaRequest,
+                                        BindingResult bindingResult,
+                                        Authentication authentication,
+                                        RedirectAttributes redirectAttributes,
+                                        Model model) {
+        logger.info("Iniciando procesarReagendarCita para cita {} por el usuario {}", id, authentication.getName());
+        logger.debug("CitaRequest recibido para reagendamiento: {}", citaRequest);
+
+        // Mover la asignación de pacienteId y sucursalId aquí, antes de la validación del formulario
+        String username = authentication.getName();
+        Paciente paciente = null; // Declarar paciente aquí
+        try {
+            paciente = pacienteRepository.findByUsername(username)
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Paciente no encontrado para el usuario: " + username));
+            citaRequest.setPacienteId(paciente.getId());
+            logger.debug("PacienteId asignado a citaRequest para reagendamiento: {}", citaRequest.getPacienteId());
+
+            UsuarioResponse medico = usuarioService.buscarPorId(citaRequest.getMedicoId());
+            if (medico.getSucursalId() == null) {
+                logger.error("Médico {} no tiene sucursal asignada.", medico.getId());
+                throw new IllegalArgumentException("El médico seleccionado no tiene una sucursal asignada.");
+            }
+            citaRequest.setSucursalId(medico.getSucursalId());
+            logger.debug("SucursalId asignado a citaRequest para reagendamiento: {}", citaRequest.getSucursalId());
+
+        } catch (RecursoNoEncontradoException | IllegalArgumentException e) {
+            bindingResult.reject("global.error", e.getMessage());
+            model.addAttribute("especialidades", especialidadService.listarTodos());
+            model.addAttribute("citaRequest", citaRequest);
+            model.addAttribute("citaOriginalId", id); // Mantener el ID original
+            model.addAttribute("errorNegocio", e.getMessage());
+            return "paciente-agendar-cita";
+        }
+
+        if (bindingResult.hasErrors()) {
+            logger.warn("Errores de validación encontrados para reagendamiento: {}", bindingResult.getAllErrors());
+            model.addAttribute("especialidades", especialidadService.listarTodos());
+            model.addAttribute("citaRequest", citaRequest);
+            model.addAttribute("citaOriginalId", id); // Mantener el ID original
+            return "paciente-agendar-cita";
+        }
+
+        logger.debug("Nueva Fecha y Hora de la cita para reagendamiento: {}", citaRequest.getFechaHora());
+
+        try {
+            citaService.reagendarCita(id, citaRequest, paciente.getId()); // Nuevo método en CitaService
+            logger.info("Cita {} reagendada exitosamente por el paciente {}", id, paciente.getId());
+
+            redirectAttributes.addFlashAttribute("mensajeExito", "¡Cita #" + id + " reagendada exitosamente!");
+            return "redirect:/paciente/portal/citas";
+
+        } catch (RecursoNoEncontradoException | IllegalArgumentException e) {
+            logger.error("Error de negocio al reagendar cita {}: {}", id, e.getMessage());
+            model.addAttribute("errorNegocio", e.getMessage());
+            model.addAttribute("especialidades", especialidadService.listarTodos());
+            model.addAttribute("citaRequest", citaRequest);
+            model.addAttribute("citaOriginalId", id); // Mantener el ID original
+            return "paciente-agendar-cita";
+        } catch (Exception e) {
+            logger.error("Error inesperado al procesar reagendamiento de cita {}: {}", id, e.getMessage(), e);
+            model.addAttribute("errorNegocio", "Ocurrió un error inesperado al reagendar la cita.");
+            model.addAttribute("especialidades", especialidadService.listarTodos());
+            model.addAttribute("citaRequest", citaRequest);
+            model.addAttribute("citaOriginalId", id); // Mantener el ID original
+            return "paciente-agendar-cita";
+        }
+    }
+
 
     @GetMapping("/medicos-por-especialidad")
     @ResponseBody
@@ -171,7 +313,7 @@ public class PacientePortalController {
         LocalDate fechaDate = LocalDate.parse(fecha);
         
         // Obtener horarios ocupados del CitaService
-        List<LocalTime> horariosOcupados = citaService.buscarHorariosOcupados(medicoId, fechaDate);
+        List<LocalTime> horariosOcupados = citaService.buscarHorariosOcupados(medicoId, fechaDate, Optional.empty());
 
         // Generar todos los horarios posibles (8:00 - 17:30 en intervalos de 30 min)
         List<Map<String, Object>> horariosDisponibles = new ArrayList<>();

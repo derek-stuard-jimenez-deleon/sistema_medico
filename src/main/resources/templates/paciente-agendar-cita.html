@@ -12,7 +12,7 @@
 
 <main class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="fw-bold mb-0">Agendar Nueva Cita</h4>
+        <h4 class="fw-bold mb-0" th:text="${citaOriginalId != null ? 'Reagendar Cita' : 'Agendar Nueva Cita'}">Agendar Nueva Cita</h4>
         <a th:href="@{/paciente/portal/citas}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Volver a Mis Citas</a>
     </div>
 
@@ -20,7 +20,10 @@
         <!-- Alerta para errores de negocio -->
         <div class="alert alert-danger" th:if="${errorNegocio}" th:text="${errorNegocio}"></div>
 
-        <form th:action="@{/paciente/portal/citas/agendar}" th:object="${citaRequest}" method="post">
+        <form th:action="${citaOriginalId != null ? '/paciente/portal/citas/reagendar/' + citaOriginalId : '/paciente/portal/citas/agendar'}" th:object="${citaRequest}" method="post">
+            <!-- Campo oculto para el ID de la cita original en caso de reagendamiento -->
+            <input type="hidden" id="citaOriginalId" th:value="${citaOriginalId}" />
+
             <div class="row g-3">
                 <div class="col-md-6">
                     <label for="especialidad" class="form-label">Especialidad</label>
@@ -73,7 +76,7 @@
             <hr class="my-4">
 
             <div class="d-flex justify-content-end gap-2">
-                <button type="submit" class="btn btn-sistema">Agendar Cita</button>
+                <button type="submit" class="btn btn-sistema" th:text="${citaOriginalId != null ? 'Reagendar Cita' : 'Agendar Cita'}">Agendar Cita</button>
             </div>
         </form>
     </div>
@@ -122,6 +125,7 @@
         const fecha = document.getElementById('fecha').value;
         const medicoId = document.getElementById('medico').value;
         const especialidadId = document.getElementById('especialidad').value;
+        const citaOriginalId = document.getElementById('citaOriginalId').value; // Obtener el ID de la cita original
 
         // Limpiar opciones anteriores
         const horaSelect = document.getElementById('hora');
@@ -132,7 +136,12 @@
             return;
         }
 
-        fetch(`/paciente/portal/horarios-disponibles?fecha=${fecha}&medicoId=${medicoId}&especialidadId=${especialidadId}`)
+        let url = `/paciente/portal/horarios-disponibles?fecha=${fecha}&medicoId=${medicoId}&especialidadId=${especialidadId}`;
+        if (citaOriginalId) {
+            url += `&citaId=${citaOriginalId}`; // Añadir citaId si estamos reagendando
+        }
+
+        fetch(url)
             .then(response => response.json())
             .then(horarios => {
                 horaSelect.innerHTML = '<option value="">Seleccione una hora</option>';
