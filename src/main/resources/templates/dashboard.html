@@ -52,6 +52,17 @@
             <a th:href="@{/inventario/movimientos}" class="btn btn-sistema ms-2" sec:authorize="hasAnyRole('ADMIN', 'FARMACEUTICO')">
                 <i class="bi bi-box-seam"></i> Bitácora Inventario
             </a>
+
+            <!-- Botón para Enfermería -->
+            <a th:href="@{/enfermeria}" class="btn btn-sistema ms-2" sec:authorize="hasAnyRole('ADMIN', 'ENFERMERO', 'MEDICO')">
+                <i class="bi bi-clipboard2-pulse"></i> Signos Vitales
+            </a>
+
+            <!-- Botón para Médico -->
+            <a th:href="@{/consulta-medica}" class="btn btn-sistema ms-2" sec:authorize="hasAnyRole('ADMIN', 'MEDICO')">
+                <i class="bi bi-file-earmark-medical"></i> Consulta Médica
+            </a>
+
         </div>
     </div>
 </div>
