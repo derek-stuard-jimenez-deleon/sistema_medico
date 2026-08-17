@@ -32,4 +32,12 @@ public interface CitaRepository extends JpaRepository<Cita, Long> {
 
     // Método para listar todas las citas ordenadas por ID descendente
     List<Cita> findAllByOrderByIdDesc();
+
+    // Método para buscar citas por estado y fechaHora de la cita anterior a un punto en el tiempo
+    @EntityGraph(attributePaths = {"paciente", "medico", "especialidad", "sucursal"})
+    List<Cita> findByEstadoAndFechaHoraBefore(Cita.EstadoCita estado, LocalDateTime fechaHora);
+
+    // Nuevo método para buscar citas por estado y reservaExpiraEn anterior a un punto en el tiempo
+    @EntityGraph(attributePaths = {"paciente", "medico", "especialidad", "sucursal"})
+    List<Cita> findByEstadoAndReservaExpiraEnBefore(Cita.EstadoCita estado, LocalDateTime reservaExpiraEn);
 }

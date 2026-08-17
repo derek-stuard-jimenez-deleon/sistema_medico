@@ -97,6 +97,7 @@ public class CitaService {
         cita.setMotivoVisita(request.getMotivoVisita());
         cita.setEstado(Cita.EstadoCita.RESERVADA);
         cita.setTipo(Cita.TipoCita.NORMAL);
+        cita.setReservaExpiraEn(LocalDateTime.now().plusMinutes(5)); // Establecer el tiempo de expiración de la reserva
 
         Cita guardada = citaRepository.save(cita);
 

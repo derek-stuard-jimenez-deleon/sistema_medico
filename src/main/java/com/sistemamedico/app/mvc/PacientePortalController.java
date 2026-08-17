@@ -136,11 +136,11 @@ public class PacientePortalController {
 
         try {
             // Llamar al servicio para agendar la cita
-            citaService.crear(citaRequest);
+            CitaResponse citaCreada = citaService.crear(citaRequest); // Capturar la respuesta
             logger.info("Cita agendada exitosamente para el paciente {} con el médico {}", citaRequest.getPacienteId(), citaRequest.getMedicoId());
 
-            redirectAttributes.addFlashAttribute("mensajeExito", "¡Cita agendada exitosamente!");
-            return "redirect:/paciente/portal/citas";
+            redirectAttributes.addFlashAttribute("mensajeExito", "¡Cita agendada exitosamente! Ahora complete el pago.");
+            return "redirect:/paciente/portal/citas/" + citaCreada.getId() + "/pagar"; // Redirigir a la página de pago
 
         } catch (RecursoNoEncontradoException | IllegalArgumentException e) {
             logger.error("Error de negocio al agendar cita: {}", e.getMessage());
@@ -331,5 +331,40 @@ public class PacientePortalController {
         }
         
         return horariosDisponibles;
+    }
+
+    @GetMapping("/citas/{citaId}/pagar")
+    public String mostrarFormularioPagoCita(@PathVariable Long citaId, Model model, Authentication authentication, RedirectAttributes redirectAttributes) {
+        String username = authentication.getName();
+        try {
+            Paciente paciente = pacienteRepository.findByUsername(username)
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Paciente no encontrado para el usuario: " + username));
+
+            CitaResponse cita = citaService.buscarPorId(citaId);
+
+            // Validar que la cita pertenezca al paciente autenticado
+            if (!cita.getPacienteDpi().equals(paciente.getDpi())) {
+                redirectAttributes.addFlashAttribute("error", "No tiene permisos para acceder a esta página de pago.");
+                return "redirect:/paciente/portal/citas";
+            }
+
+            // Validar que la cita esté en estado RESERVADA (asumiendo que RESERVADA significa pendiente de pago inicial)
+            if (!cita.getEstado().equals(Cita.EstadoCita.RESERVADA.name())) {
+                redirectAttributes.addFlashAttribute("error", "La cita no está en estado de pago pendiente.");
+                return "redirect:/paciente/portal/citas";
+            }
+
+            model.addAttribute("cita", cita);
+            // Aquí se podría añadir el tiempo de expiración de la reserva si se gestiona en el backend
+            // Por ahora, el temporizador se iniciará en el frontend al cargar la página de pago.
+            return "paciente-pago-cita"; // Nombre de la nueva plantilla HTML
+        } catch (RecursoNoEncontradoException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+            return "redirect:/paciente/portal/citas";
+        } catch (Exception e) {
+            logger.error("Error al mostrar formulario de pago para cita {}: {}", citaId, e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("error", "Ocurrió un error inesperado al cargar la página de pago.");
+            return "redirect:/paciente/portal/citas";
+        }
     }
 }
