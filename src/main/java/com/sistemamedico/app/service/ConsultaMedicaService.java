@@ -13,6 +13,8 @@ import com.sistemamedico.app.repository.UsuarioRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List; // Importar List para listarTodas
+
 @Service
 public class ConsultaMedicaService {
 
@@ -73,10 +75,20 @@ public class ConsultaMedicaService {
         return mapearAResponse(guardada);
     }
 
+    public ConsultaMedicaResponse buscarPorId(Long id) { // <-- NUEVO MÉTODO
+        ConsultaMedica consulta = consultaMedicaRepository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Consulta médica no encontrada."));
+        return mapearAResponse(consulta);
+    }
+
     public ConsultaMedicaResponse buscarPorCita(Long citaId) {
         ConsultaMedica consulta = consultaMedicaRepository.findByCitaId(citaId)
                 .orElseThrow(() -> new RecursoNoEncontradoException("No hay consulta médica registrada para esta cita."));
         return mapearAResponse(consulta);
+    }
+
+    public List<ConsultaMedicaResponse> listarTodas() { // <-- NUEVO MÉTODO
+        return consultaMedicaRepository.findAll().stream().map(this::mapearAResponse).toList();
     }
 
     private ConsultaMedicaResponse mapearAResponse(ConsultaMedica consulta) {

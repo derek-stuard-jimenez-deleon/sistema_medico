@@ -8,6 +8,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/consultas-medicas")
 public class ConsultaMedicaController {
@@ -19,12 +21,28 @@ public class ConsultaMedicaController {
     }
 
     @PostMapping
-    public ResponseEntity<ConsultaMedicaResponse> crear(@Valid @RequestBody ConsultaMedicaRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(consultaMedicaService.crear(request));
+    public ResponseEntity<ConsultaMedicaResponse> crearConsulta(@Valid @RequestBody ConsultaMedicaRequest request) {
+        ConsultaMedicaResponse response = consultaMedicaService.crear(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ConsultaMedicaResponse> buscarPorId(@PathVariable Long id) {
+        ConsultaMedicaResponse response = consultaMedicaService.buscarPorId(id);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/cita/{citaId}")
     public ResponseEntity<ConsultaMedicaResponse> buscarPorCita(@PathVariable Long citaId) {
-        return ResponseEntity.ok(consultaMedicaService.buscarPorCita(citaId));
+        ConsultaMedicaResponse response = consultaMedicaService.buscarPorCita(citaId);
+        return ResponseEntity.ok(response);
     }
+
+    @GetMapping
+    public ResponseEntity<List<ConsultaMedicaResponse>> listarTodas() {
+        List<ConsultaMedicaResponse> response = consultaMedicaService.listarTodas();
+        return ResponseEntity.ok(response);
+    }
+
+    // Puedes añadir más endpoints como PUT, DELETE, etc.
 }

@@ -2,6 +2,7 @@ package com.sistemamedico.app.mvc;
 
 import com.sistemamedico.app.dto.CitaResponse;
 import com.sistemamedico.app.dto.ConsultaMedicaRequest;
+import com.sistemamedico.app.dto.SignosVitalesResponse;
 import com.sistemamedico.app.exception.RecursoNoEncontradoException;
 import com.sistemamedico.app.repository.UsuarioRepository;
 import com.sistemamedico.app.service.CitaService;
@@ -13,7 +14,10 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/consulta-medica")
@@ -34,20 +38,34 @@ public class ConsultaMedicaMvcController {
         this.usuarioRepository = usuarioRepository;
     }
 
-    // Bandeja del médico logueado: sus citas PAGADAS con signos vitales ya tomados, aún sin consulta cerrada
+    // Bandeja del médico logueado: sus citas PAGADAS con signos vitales ya tomados,
+    // aún sin consulta cerrada. Las marcadas como emergencia (FA01) van primero.
     @GetMapping
     public String bandeja(Authentication authentication, Model model) {
         var medico = usuarioRepository.findByUsername(authentication.getName())
                 .orElseThrow(() -> new RecursoNoEncontradoException("No se encontró el usuario en sesión."));
 
+        // Mapa citaId -> signos vitales, para no consultar dos veces y poder ordenar/mostrar alertas
+        Map<Long, SignosVitalesResponse> signosPorCita = new HashMap<>();
+
         List<CitaResponse> citas = citaService.listarTodas().stream()
                 .filter(c -> medico.getId().equals(c.getMedicoId()))
                 .filter(c -> "PAGADA".equals(c.getEstado()))
-                .filter(c -> tieneSignosVitales(c.getId()))
                 .filter(c -> !tieneConsultaCerrada(c.getId()))
+                .filter(c -> {
+                    SignosVitalesResponse signos = obtenerSignos(c.getId());
+                    if (signos == null) return false;
+                    signosPorCita.put(c.getId(), signos);
+                    return true;
+                })
+                // Emergencias primero (FA01), luego orden natural por fecha/hora de cita
+                .sorted(Comparator.comparing(
+                        (CitaResponse c) -> Boolean.TRUE.equals(signosPorCita.get(c.getId()).getEsEmergencia()),
+                        Comparator.reverseOrder()))
                 .toList();
 
         model.addAttribute("citas", citas);
+        model.addAttribute("signosPorCita", signosPorCita);
         return "consulta-medica";
     }
 
@@ -84,12 +102,11 @@ public class ConsultaMedicaMvcController {
         return "redirect:/consulta-medica";
     }
 
-    private boolean tieneSignosVitales(Long citaId) {
+    private SignosVitalesResponse obtenerSignos(Long citaId) {
         try {
-            signosVitalesService.buscarPorCita(citaId);
-            return true;
+            return signosVitalesService.buscarPorCita(citaId);
         } catch (RecursoNoEncontradoException e) {
-            return false;
+            return null;
         }
     }
 

@@ -17,6 +17,10 @@ public class SignosVitalesResponse {
     private Integer frecuenciaCardiaca;
     private LocalDateTime fechaHora;
 
+    // --- AGREGAR estos campos junto a los demás ---
+    private Boolean esEmergencia;
+    private String alertasClinicas;
+
     // --- Getters y setters ---
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -40,4 +44,10 @@ public class SignosVitalesResponse {
     public void setFrecuenciaCardiaca(Integer frecuenciaCardiaca) { this.frecuenciaCardiaca = frecuenciaCardiaca; }
     public LocalDateTime getFechaHora() { return fechaHora; }
     public void setFechaHora(LocalDateTime fechaHora) { this.fechaHora = fechaHora; }
+
+    // --- AGREGAR estos getters/setters junto a los demás ---
+    public Boolean getEsEmergencia() { return esEmergencia; }
+    public void setEsEmergencia(Boolean esEmergencia) { this.esEmergencia = esEmergencia; }
+    public String getAlertasClinicas() { return alertasClinicas; }
+    public void setAlertasClinicas(String alertasClinicas) { this.alertasClinicas = alertasClinicas; }
 }

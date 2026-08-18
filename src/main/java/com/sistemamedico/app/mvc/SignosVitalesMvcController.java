@@ -12,6 +12,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Controller
@@ -48,10 +49,11 @@ public class SignosVitalesMvcController {
     public String registrar(@PathVariable Long citaId,
                             @RequestParam Integer presionSistolica,
                             @RequestParam Integer presionDiastolica,
-                            @RequestParam java.math.BigDecimal temperatura,
-                            @RequestParam java.math.BigDecimal peso,
-                            @RequestParam java.math.BigDecimal talla,
+                            @RequestParam BigDecimal temperatura,
+                            @RequestParam BigDecimal peso,
+                            @RequestParam BigDecimal talla,
                             @RequestParam Integer frecuenciaCardiaca,
+                            @RequestParam(defaultValue = "false") boolean esEmergencia,
                             @RequestParam String dpi,
                             Authentication authentication,
                             RedirectAttributes redirectAttributes) {
@@ -68,9 +70,22 @@ public class SignosVitalesMvcController {
             request.setPeso(peso);
             request.setTalla(talla);
             request.setFrecuenciaCardiaca(frecuenciaCardiaca);
+            request.setEsEmergencia(esEmergencia);
 
-            signosVitalesService.crear(request);
-            redirectAttributes.addFlashAttribute("mensajeExito", "Signos vitales registrados correctamente.");
+            var resultado = signosVitalesService.crear(request);
+
+            if (esEmergencia) {
+                redirectAttributes.addFlashAttribute("mensajeExito",
+                        "Signos vitales de emergencia registrados para " + resultado.getPacienteNombre() +
+                                ". El paciente debe pasar directamente a consulta médica.");
+            } else if (resultado.getAlertasClinicas() != null) {
+                redirectAttributes.addFlashAttribute("mensajeExito",
+                        "Signos vitales registrados correctamente. Atención: " + resultado.getAlertasClinicas());
+            } else {
+                redirectAttributes.addFlashAttribute("mensajeExito",
+                        "Signos vitales del paciente " + resultado.getPacienteNombre() +
+                                " registrados correctamente. El paciente puede regresar a la sala de espera.");
+            }
         } catch (IllegalArgumentException | RecursoNoEncontradoException e) {
             redirectAttributes.addFlashAttribute("errorNegocio", e.getMessage());
         }

@@ -41,6 +41,13 @@ public class SignosVitales extends BaseEntity {
     @Column(name = "fecha_hora", nullable = false)
     private LocalDateTime fechaHora = LocalDateTime.now();
 
+    // --- AGREGAR estos campos después de fechaHora ---
+    @Column(name = "es_emergencia", nullable = false)
+    private Boolean esEmergencia = false;
+
+    @Column(name = "alertas_clinicas", length = 1000)
+    private String alertasClinicas; // texto con los signos fuera de rango clínico normal, o null si ninguno
+
     // --- Getters y setters ---
     public Cita getCita() { return cita; }
     public void setCita(Cita cita) { this.cita = cita; }
@@ -60,4 +67,10 @@ public class SignosVitales extends BaseEntity {
     public void setFrecuenciaCardiaca(Integer frecuenciaCardiaca) { this.frecuenciaCardiaca = frecuenciaCardiaca; }
     public LocalDateTime getFechaHora() { return fechaHora; }
     public void setFechaHora(LocalDateTime fechaHora) { this.fechaHora = fechaHora; }
+
+    // --- AGREGAR estos getters/setters junto a los demás ---
+    public Boolean getEsEmergencia() { return esEmergencia; }
+    public void setEsEmergencia(Boolean esEmergencia) { this.esEmergencia = esEmergencia; }
+    public String getAlertasClinicas() { return alertasClinicas; }
+    public void setAlertasClinicas(String alertasClinicas) { this.alertasClinicas = alertasClinicas; }
 }

@@ -42,6 +42,9 @@ public class SignosVitalesRequest {
     @Max(value = 220, message = "La frecuencia cardiaca no puede exceder 220 lpm.")
     private Integer frecuenciaCardiaca;
 
+    // --- AGREGAR este campo junto a los demás ---
+    private boolean esEmergencia = false; // FA01 - indicador "¿Emergencia?"
+
     // --- Getters y setters ---
     public Long getCitaId() { return citaId; }
     public void setCitaId(Long citaId) { this.citaId = citaId; }
@@ -59,4 +62,8 @@ public class SignosVitalesRequest {
     public void setTalla(BigDecimal talla) { this.talla = talla; }
     public Integer getFrecuenciaCardiaca() { return frecuenciaCardiaca; }
     public void setFrecuenciaCardiaca(Integer frecuenciaCardiaca) { this.frecuenciaCardiaca = frecuenciaCardiaca; }
+
+    // --- AGREGAR este getter/setter junto a los demás ---
+    public boolean isEsEmergencia() { return esEmergencia; }
+    public void setEsEmergencia(boolean esEmergencia) { this.esEmergencia = esEmergencia; }
 }

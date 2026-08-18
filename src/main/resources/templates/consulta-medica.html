@@ -19,22 +19,45 @@
     <div class="alert alert-success" th:if="${mensajeExito}" th:text="${mensajeExito}"></div>
     <div class="alert alert-danger" th:if="${errorNegocio}" th:text="${errorNegocio}"></div>
 
-    <p class="text-muted">Pacientes con signos vitales tomados, listos para atención.</p>
+    <p class="text-muted">Pacientes con signos vitales tomados, listos para atención. Las emergencias se muestran primero.</p>
 
     <div class="card card-panel p-4 text-center" th:if="${#lists.isEmpty(citas)}">
         <p class="text-muted mb-0">No tienes citas pendientes de consulta en este momento.</p>
     </div>
 
     <div class="accordion" id="acordeonConsultas" th:unless="${#lists.isEmpty(citas)}">
-        <div class="accordion-item" th:each="cita : ${citas}">
+        <div class="accordion-item" th:each="cita : ${citas}"
+             th:with="signos=${signosPorCita.get(cita.id)}"
+             th:classappend="${signos.esEmergencia} ? 'border-danger border-2' : ''">
+
             <h2 class="accordion-header">
                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
                         th:data-bs-target="'#colapso-' + ${cita.id}">
+                    <span th:if="${signos.esEmergencia}" class="badge bg-danger me-2">
+                        <i class="bi bi-exclamation-octagon-fill"></i> URGENTE
+                    </span>
                     <span th:text="'Cita #' + ${cita.id} + ' — ' + ${cita.pacienteNombre} + ' (' + ${cita.especialidadNombre} + ')'"></span>
                 </button>
             </h2>
             <div th:id="'colapso-' + ${cita.id}" class="accordion-collapse collapse" data-bs-parent="#acordeonConsultas">
                 <div class="accordion-body">
+
+                    <!-- Signos vitales tomados por enfermería, referencia para el médico -->
+                    <div class="card card-panel p-3 mb-3 bg-light">
+                        <h6 class="fw-bold mb-2"><i class="bi bi-clipboard2-pulse"></i> Signos vitales</h6>
+                        <div class="row g-2 small">
+                            <div class="col-md-2"><strong>Presión:</strong> <span th:text="${signos.presionSistolica} + '/' + ${signos.presionDiastolica}"></span> mmHg</div>
+                            <div class="col-md-2"><strong>Temp:</strong> <span th:text="${signos.temperatura}"></span> °C</div>
+                            <div class="col-md-2"><strong>Peso:</strong> <span th:text="${signos.peso}"></span> kg</div>
+                            <div class="col-md-2"><strong>Talla:</strong> <span th:text="${signos.talla}"></span> cm</div>
+                            <div class="col-md-3"><strong>FC:</strong> <span th:text="${signos.frecuenciaCardiaca}"></span> lpm</div>
+                        </div>
+                        <div class="alert alert-warning mt-2 mb-0 py-2" th:if="${signos.alertasClinicas != null}">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <span th:text="${signos.alertasClinicas}"></span>
+                        </div>
+                    </div>
+
                     <form th:action="@{/consulta-medica/{id}/guardar(id=${cita.id})}" method="post" class="row g-3">
 
                         <div class="col-12">
