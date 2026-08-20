@@ -1,49 +1,645 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Sesión - Sistema Medico 2026</title>
+    <!-- Script para cargar el tema antes de renderizar y evitar parpadeos -->
+    <script>
+        const storedTheme = localStorage.getItem('sistema-medico-theme');
+        if (storedTheme) {
+            document.documentElement.setAttribute('data-bs-theme', storedTheme);
+        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.setAttribute('data-bs-theme', 'dark');
+        }
+    </script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link th:href="@{/css/estilos.css}" rel="stylesheet">
+    <style>
+        /* ===== LOGIN PAGE SPECIFIC STYLES ===== */
+
+        /* Animated Background Panel */
+        .login-brand-panel {
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 40%, #102a30 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-brand-panel::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(ellipse at 30% 50%, rgba(154,208,208,0.08) 0%, transparent 60%),
+                        radial-gradient(ellipse at 70% 20%, rgba(154,208,208,0.05) 0%, transparent 50%);
+            animation: floatGlow 8s ease-in-out infinite alternate;
+        }
+
+        @keyframes floatGlow {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(30px, -20px) rotate(3deg); }
+        }
+
+        /* Dot Grid Pattern */
+        .dot-grid {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            opacity: 0.06;
+            background-image: radial-gradient(circle, #9ad0d0 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        /* Floating Particles */
+        .particles {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(154,208,208,0.3);
+            animation: particleFloat linear infinite;
+        }
+
+        .particle:nth-child(1) { width: 4px; height: 4px; left: 15%; animation-duration: 12s; animation-delay: 0s; }
+        .particle:nth-child(2) { width: 6px; height: 6px; left: 35%; animation-duration: 15s; animation-delay: 2s; }
+        .particle:nth-child(3) { width: 3px; height: 3px; left: 55%; animation-duration: 10s; animation-delay: 4s; }
+        .particle:nth-child(4) { width: 5px; height: 5px; left: 75%; animation-duration: 14s; animation-delay: 1s; }
+        .particle:nth-child(5) { width: 4px; height: 4px; left: 25%; animation-duration: 11s; animation-delay: 3s; }
+        .particle:nth-child(6) { width: 7px; height: 7px; left: 65%; animation-duration: 16s; animation-delay: 5s; }
+
+        @keyframes particleFloat {
+            0% { transform: translateY(100vh) scale(0); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+        }
+
+        /* Branding Content */
+        .brand-content {
+            z-index: 2;
+            position: relative;
+        }
+
+        .brand-icon-wrapper {
+            width: 100px;
+            height: 100px;
+            border-radius: 28px;
+            background: rgba(154,208,208,0.12);
+            border: 1px solid rgba(154,208,208,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            backdrop-filter: blur(10px);
+            animation: fadeSlideUp 0.8s ease-out 0.2s both;
+        }
+
+        .brand-icon-wrapper i {
+            font-size: 3rem;
+            color: #9ad0d0;
+            filter: drop-shadow(0 0 20px rgba(154,208,208,0.4));
+        }
+
+        .brand-title {
+            font-size: 3rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, #ffffff 0%, #9ad0d0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: fadeSlideUp 0.8s ease-out 0.4s both;
+        }
+
+        .brand-subtitle {
+            font-size: 1.05rem;
+            color: rgba(255,255,255,0.6);
+            max-width: 380px;
+            margin: 0 auto;
+            line-height: 1.7;
+            animation: fadeSlideUp 0.8s ease-out 0.6s both;
+        }
+
+        .brand-features {
+            margin-top: 2.5rem;
+            animation: fadeSlideUp 0.8s ease-out 0.8s both;
+        }
+
+        .brand-feature {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: rgba(255,255,255,0.5);
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .brand-feature i {
+            color: #9ad0d0;
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* ===== Right Panel - Form ===== */
+        .login-form-panel {
+            background-color: var(--bs-body-bg);
+            transition: background-color 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .login-form-wrapper {
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            animation: fadeSlideUp 0.6s ease-out 0.1s both;
+        }
+
+        .login-avatar {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1a1a2e, #2a2a4e);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.25rem;
+            box-shadow: 0 8px 32px rgba(26,26,46,0.2);
+        }
+
+        [data-bs-theme="dark"] .login-avatar {
+            background: linear-gradient(135deg, #9ad0d0, #6bb8b8);
+            box-shadow: 0 8px 32px rgba(154,208,208,0.2);
+        }
+
+        .login-avatar i {
+            font-size: 1.75rem;
+            color: white;
+        }
+
+        [data-bs-theme="dark"] .login-avatar i {
+            color: #0f0f23;
+        }
+
+        .login-header h2 {
+            font-weight: 700;
+            font-size: 1.6rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .login-header p {
+            color: var(--bs-secondary-color);
+            font-size: 0.95rem;
+        }
+
+        /* Form Inputs with Icons */
+        .input-modern {
+            position: relative;
+            margin-bottom: 1.25rem;
+            animation: fadeSlideUp 0.6s ease-out both;
+        }
+
+        .input-modern:nth-child(1) { animation-delay: 0.2s; }
+        .input-modern:nth-child(2) { animation-delay: 0.3s; }
+
+        .input-modern label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--bs-secondary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .input-icon-wrapper {
+            position: relative;
+        }
+
+        .input-icon-wrapper .input-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--bs-secondary-color);
+            font-size: 1.1rem;
+            transition: color 0.3s ease;
+            z-index: 3;
+        }
+
+        .input-icon-wrapper .form-control {
+            padding: 14px 48px 14px 48px;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            border: 2px solid transparent;
+            background-color: var(--bs-tertiary-bg);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .input-icon-wrapper .form-control:focus {
+            background-color: var(--bs-body-bg);
+            border-color: #9ad0d0;
+            box-shadow: 0 0 0 4px rgba(154,208,208,0.15);
+        }
+
+        .input-icon-wrapper .form-control:focus ~ .input-icon {
+            color: #9ad0d0;
+        }
+
+        .input-icon-wrapper .btn-toggle-pass {
+            position: absolute;
+            right: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--bs-secondary-color);
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            z-index: 3;
+        }
+
+        .input-icon-wrapper .btn-toggle-pass:hover {
+            color: #9ad0d0;
+            background: rgba(154,208,208,0.1);
+        }
+
+        /* Submit Button */
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border: none;
+            background: linear-gradient(135deg, #1a1a2e 0%, #2a2a4e 100%);
+            color: white;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            animation: fadeSlideUp 0.6s ease-out 0.4s both;
+        }
+
+        .btn-login::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(26,26,46,0.3);
+        }
+
+        .btn-login:hover::before {
+            left: 100%;
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        [data-bs-theme="dark"] .btn-login {
+            background: linear-gradient(135deg, #9ad0d0 0%, #6bb8b8 100%);
+            color: #0f0f23;
+        }
+
+        [data-bs-theme="dark"] .btn-login:hover {
+            box-shadow: 0 8px 25px rgba(154,208,208,0.3);
+        }
+
+        /* Links */
+        .login-link {
+            color: #9ad0d0;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .login-link::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0%;
+            height: 2px;
+            background: #9ad0d0;
+            transition: width 0.3s ease;
+        }
+
+        .login-link:hover {
+            color: #7bbfbf;
+        }
+
+        .login-link:hover::after {
+            width: 100%;
+        }
+
+        /* Alert Styling */
+        .alert-login {
+            border: none;
+            border-radius: 14px;
+            padding: 14px 18px;
+            font-size: 0.9rem;
+            backdrop-filter: blur(10px);
+            animation: shakeIn 0.5s ease-out;
+        }
+
+        @keyframes shakeIn {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-4px); }
+            80% { transform: translateX(4px); }
+        }
+
+        /* Footer */
+        .login-footer {
+            animation: fadeSlideUp 0.6s ease-out 0.5s both;
+        }
+
+        /* Entrance Animation */
+        @keyframes fadeSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Pulse Ring on Brand Icon */
+        .brand-icon-wrapper::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 28px;
+            border: 1px solid rgba(154,208,208,0.3);
+            animation: pulseRing 3s ease-out infinite;
+        }
+
+        @keyframes pulseRing {
+            0% { transform: scale(1); opacity: 0.6; }
+            100% { transform: scale(1.4); opacity: 0; }
+        }
+
+        /* Divider */
+        .login-divider {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1.5rem 0;
+            animation: fadeSlideUp 0.6s ease-out 0.45s both;
+        }
+
+        .login-divider::before,
+        .login-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--bs-border-color);
+        }
+
+        .login-divider span {
+            font-size: 0.8rem;
+            color: var(--bs-secondary-color);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 767.98px) {
+            .login-form-panel {
+                padding: 1.5rem;
+                min-height: 100vh;
+            }
+
+            .login-form-panel::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 200px;
+                background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 40%, #102a30 100%);
+                z-index: 0;
+            }
+
+            .login-form-wrapper {
+                position: relative;
+                z-index: 1;
+                background: var(--bs-body-bg);
+                border-radius: 24px;
+                padding: 2rem 1.5rem;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+                margin-top: 60px;
+            }
+
+            [data-bs-theme="dark"] .login-form-wrapper {
+                box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            }
+        }
+
+        /* Floating version tag */
+        .version-tag {
+            position: absolute;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.3);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+    </style>
 </head>
-<body class="pantalla-login">
-<div class="card card-login">
-    <div class="card-body p-5">
-        <div class="icono-login">
-            <i class="bi bi-heart-pulse-fill"></i>
-        </div>
-        <h2 class="text-center mb-1 fw-bold">Sistema Medico 2026</h2>
-        <p class="text-center text-muted mb-4">Inicia sesión para continuar</p>
+<body class="pantalla-login d-block m-0 p-0 overflow-hidden">
+<div class="row g-0 vh-100">
 
-        <!-- Bloque de Alerta de Error Modificado -->
-        <div class="alert alert-danger d-flex align-items-center gap-2" th:if="${errorMessage != null}">
-            <i class="bi bi-exclamation-triangle-fill"></i>
-            <span th:text="${errorMessage}"></span>
+    <!-- ===== Panel Izquierdo (Branding) ===== -->
+    <div class="col-md-6 d-none d-md-flex flex-column justify-content-center align-items-center login-brand-panel">
+        <div class="dot-grid"></div>
+
+        <!-- Floating Particles -->
+        <div class="particles">
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
         </div>
 
-        <form th:action="@{/login}" method="post">
-            <div class="mb-3">
-                <label class="form-label">Usuario</label>
-                <input type="text" name="username" class="form-control" required>
+        <div class="brand-content text-center px-5">
+            <div class="brand-icon-wrapper">
+                <i class="bi bi-heart-pulse-fill"></i>
             </div>
-            <div class="mb-4">
-                <label class="form-label">Contraseña</label>
-                <div class="input-group">
-                    <input type="password" name="password" id="passwordInput" class="form-control" required>
-                    <button class="btn btn-outline-secondary" type="button" id="togglePasswordBtn" onclick="togglePassword()" style="border-color: #dee2e6;">
-                        <i class="bi bi-eye-fill" id="togglePasswordIcon"></i>
-                    </button>
+            <h1 class="brand-title">HIS 2026</h1>
+            <p class="brand-subtitle">
+                Sistema de Información Hospitalaria de última generación.
+                Todo lo que necesitas para gestionar tu centro de salud.
+            </p>
+
+            <div class="brand-features text-start mx-auto" style="max-width: 300px;">
+                <div class="brand-feature">
+                    <i class="bi bi-calendar-check"></i>
+                    <span>Gestión inteligente de citas</span>
+                </div>
+                <div class="brand-feature">
+                    <i class="bi bi-clipboard2-pulse"></i>
+                    <span>Laboratorio y resultados</span>
+                </div>
+                <div class="brand-feature">
+                    <i class="bi bi-capsule"></i>
+                    <span>Farmacia e inventario</span>
+                </div>
+                <div class="brand-feature">
+                    <i class="bi bi-shield-check"></i>
+                    <span>Seguridad y control de acceso</span>
                 </div>
             </div>
-            <div class="text-end mb-3">
-                <a th:href="@{/forgot-password}" class="text-decoration-none small">¿Olvidaste tu contraseña?</a>
+        </div>
+
+        <span class="version-tag">v2.0 — 2026</span>
+    </div>
+
+    <!-- ===== Panel Derecho (Formulario) ===== -->
+    <div class="col-md-6 login-form-panel position-relative">
+        <div class="login-form-wrapper">
+
+            <!-- Header -->
+            <div class="login-header">
+                <div class="login-avatar d-md-none">
+                    <i class="bi bi-heart-pulse-fill"></i>
+                </div>
+                <h2>Bienvenido de nuevo</h2>
+                <p>Ingresa tus credenciales para acceder a tu panel.</p>
             </div>
-            <button type="submit" class="btn btn-sistema w-100">Ingresar</button>
-        </form>
+
+            <!-- Alerta de Error -->
+            <div class="alert alert-danger alert-login d-flex align-items-center gap-2" th:if="${errorMessage != null}">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <span th:text="${errorMessage}"></span>
+            </div>
+
+            <!-- Formulario -->
+            <form th:action="@{/login}" method="post">
+                <!-- Campo Usuario -->
+                <div class="input-modern">
+                    <label for="usernameInput">Usuario</label>
+                    <div class="input-icon-wrapper">
+                        <input type="text"
+                               name="username"
+                               id="usernameInput"
+                               class="form-control"
+                               placeholder="Ej. jperez01"
+                               autocomplete="username"
+                               required>
+                        <i class="bi bi-person input-icon"></i>
+                    </div>
+                </div>
+
+                <!-- Campo Contraseña -->
+                <div class="input-modern">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="mb-0" for="passwordInput">Contraseña</label>
+                        <a th:href="@{/forgot-password}" class="login-link small">¿Olvidaste tu contraseña?</a>
+                    </div>
+                    <div class="input-icon-wrapper">
+                        <input type="password"
+                               name="password"
+                               id="passwordInput"
+                               class="form-control"
+                               placeholder="••••••••"
+                               autocomplete="current-password"
+                               required>
+                        <i class="bi bi-lock input-icon"></i>
+                        <button class="btn-toggle-pass" type="button" id="togglePasswordBtn" onclick="togglePassword()" aria-label="Mostrar contraseña">
+                            <i class="bi bi-eye-fill" id="togglePasswordIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Botón Submit -->
+                <button type="submit" class="btn btn-login mt-3">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>Ingresar al Sistema
+                </button>
+            </form>
+
+            <!-- Divider -->
+            <div class="login-divider">
+                <span>o bien</span>
+            </div>
+
+            <!-- Footer -->
+            <div class="login-footer text-center">
+                <p class="text-muted small mb-0">
+                    ¿No tienes cuenta?
+                    <a th:href="@{/registro}" class="login-link">Regístrate como paciente</a>
+                </p>
+            </div>
+        </div>
     </div>
 </div>
+
+<!-- Floating Theme Toggle Button -->
+<button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()" title="Cambiar tema">
+    <i class="bi bi-moon-stars-fill" id="themeIcon"></i>
+</button>
+
 <script>
+    // Inicializar ícono de tema según el estado cargado
+    document.addEventListener("DOMContentLoaded", function() {
+        const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+        const themeIcon = document.getElementById('themeIcon');
+        if (currentTheme === 'dark') {
+            themeIcon.classList.replace('bi-moon-stars-fill', 'bi-sun-fill');
+        }
+    });
+
+    // Función para alternar temas
+    function toggleTheme() {
+        const html = document.documentElement;
+        const themeIcon = document.getElementById('themeIcon');
+        const currentTheme = html.getAttribute('data-bs-theme');
+
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        html.setAttribute('data-bs-theme', newTheme);
+        localStorage.setItem('sistema-medico-theme', newTheme);
+
+        if (newTheme === 'dark') {
+            themeIcon.classList.replace('bi-moon-stars-fill', 'bi-sun-fill');
+        } else {
+            themeIcon.classList.replace('bi-sun-fill', 'bi-moon-stars-fill');
+        }
+    }
+
+    // Toggle para visibilidad de contraseña
     function togglePassword() {
         const passwordInput = document.getElementById("passwordInput");
         const togglePasswordIcon = document.getElementById("togglePasswordIcon");
