@@ -31,18 +31,23 @@ public class SignosVitalesMvcController {
         this.usuarioRepository = usuarioRepository;
     }
 
-    // Bandeja: citas PAGADAS (ya verificadas en recepción) que aún no tienen signos vitales
+    // Bandeja: cola de trabajo automática para enfermería (Muestra pacientes de hoy esperando signos)
     @GetMapping
-    public String bandeja(@RequestParam(required = false) String dpi, Model model) {
-        if (dpi != null && !dpi.isBlank()) {
-            List<CitaResponse> citas = citaService.buscarPorPaciente(dpi).stream()
-                    .filter(c -> "PAGADA".equals(c.getEstado()))
-                    .filter(c -> !tieneSignosVitales(c.getId()))
-                    .toList();
-            model.addAttribute("citas", citas);
-            model.addAttribute("dpiBuscado", dpi);
-        }
+    public String bandeja(@RequestParam(required = false) Long citaEnAtencion, Model model) {
+        // Obtenemos automáticamente todas las citas pendientes del día de hoy
+        List<CitaResponse> citas = citaService.buscarCitasParaEnfermeria();
+
+        model.addAttribute("citas", citas);
+        model.addAttribute("citaEnAtencion", citaEnAtencion);
+
         return "enfermeria-signos-vitales";
+    }
+
+    // Nuevo endpoint para cuando el enfermero da click en "Llamar y Tomar Signos"
+    @PostMapping("/{citaId}/llamar")
+    public String llamarPaciente(@PathVariable Long citaId) {
+        citaService.cambiarEstado(citaId, com.sistemamedico.app.model.Cita.EstadoCita.EN_SIGNOS_VITALES);
+        return "redirect:/enfermeria?citaEnAtencion=" + citaId;
     }
 
     @PostMapping("/{citaId}/registrar")
@@ -54,7 +59,6 @@ public class SignosVitalesMvcController {
                             @RequestParam BigDecimal talla,
                             @RequestParam Integer frecuenciaCardiaca,
                             @RequestParam(defaultValue = "false") boolean esEmergencia,
-                            @RequestParam String dpi,
                             Authentication authentication,
                             RedirectAttributes redirectAttributes) {
         try {
@@ -89,9 +93,12 @@ public class SignosVitalesMvcController {
         } catch (IllegalArgumentException | RecursoNoEncontradoException e) {
             redirectAttributes.addFlashAttribute("errorNegocio", e.getMessage());
         }
-        return "redirect:/enfermeria?dpi=" + dpi;
+
+        // Ya no enviamos el DPI en la redirección, regresamos directamente a la cola limpia
+        return "redirect:/enfermeria";
     }
 
+    // Mantenemos este método por si lo usas internamente en el futuro para validaciones
     private boolean tieneSignosVitales(Long citaId) {
         try {
             signosVitalesService.buscarPorCita(citaId);

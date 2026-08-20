@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
@@ -38,11 +38,11 @@
         </ul>
 
         <h5 class="mb-3">Datos de Pago</h5>
-        <form id="paymentForm">
+        <form id="paymentForm" th:action="@{'/paciente/portal/citas/' + ${cita.id} + '/pagar'}" method="post">
             <div class="row g-3">
                 <div class="col-md-12">
                     <label for="cardNumber" class="form-label">Número de Tarjeta</label>
-                    <input type="text" id="cardNumber" class="form-control" placeholder="XXXX XXXX XXXX XXXX" required>
+                    <input type="text" id="cardNumber" name="cardNumber" class="form-control" placeholder="XXXX XXXX XXXX XXXX" required>
                     <div class="invalid-feedback"></div>
                 </div>
                 <div class="col-md-12">
@@ -108,19 +108,9 @@
         updateCountdown(); // Llamar una vez inmediatamente para evitar un retraso inicial
     });
 
-    paymentForm.addEventListener('submit', function(event) {
-        event.preventDefault();
+    paymentForm.addEventListener('submit', function() {
         payButton.disabled = true;
         payButton.textContent = 'Procesando pago...';
-
-        // Aquí iría la lógica real para procesar el pago
-        // Por ahora, simularemos un pago exitoso después de 3 segundos
-        setTimeout(() => {
-            alert('¡Pago simulado exitoso! Redirigiendo a la confirmación.');
-            // En un escenario real, aquí se haría una llamada al backend para procesar el pago
-            // y luego se redirigiría a una página de confirmación o a la lista de citas.
-            window.location.href = '/paciente/portal/citas'; // Redirigir a mis citas por ahora
-        }, 3000);
     });
 
     /*]]>*/

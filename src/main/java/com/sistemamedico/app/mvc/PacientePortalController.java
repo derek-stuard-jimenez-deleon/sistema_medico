@@ -46,12 +46,18 @@ public class PacientePortalController {
     private final CitaService citaService;
     private final EspecialidadService especialidadService;
     private final UsuarioService usuarioService;
+    private final com.sistemamedico.app.service.SucursalService sucursalService;
+    private final com.sistemamedico.app.service.SedeEspecialidadService sedeEspecialidadService;
+    private final com.sistemamedico.app.service.PagoService pagoService;
 
-    public PacientePortalController(PacienteRepository pacienteRepository, CitaService citaService, EspecialidadService especialidadService, UsuarioService usuarioService) {
+    public PacientePortalController(PacienteRepository pacienteRepository, CitaService citaService, EspecialidadService especialidadService, UsuarioService usuarioService, com.sistemamedico.app.service.SucursalService sucursalService, com.sistemamedico.app.service.SedeEspecialidadService sedeEspecialidadService, com.sistemamedico.app.service.PagoService pagoService) {
         this.pacienteRepository = pacienteRepository;
         this.citaService = citaService;
         this.especialidadService = especialidadService;
         this.usuarioService = usuarioService;
+        this.sucursalService = sucursalService;
+        this.sedeEspecialidadService = sedeEspecialidadService;
+        this.pagoService = pagoService;
     }
 
     // Eliminado el método @InitBinder
@@ -77,17 +83,20 @@ public class PacientePortalController {
     }
 
     @GetMapping("/citas/agendar")
-    public String mostrarFormularioAgendarCita(Model model) {
-        model.addAttribute("especialidades", especialidadService.listarTodos()); // Corregido: listarTodos()
+    public String mostrarFormularioAgendarCita(@RequestParam(required = false) String dpi, Model model) {
+        model.addAttribute("sucursales", sucursalService.listarTodos());
         if (!model.containsAttribute("citaRequest")) {
-            model.addAttribute("citaRequest", new CitaRequest());
+            CitaRequest citaRequest = new CitaRequest();
+            model.addAttribute("citaRequest", citaRequest);
         }
+        model.addAttribute("dpiParam", dpi); // Guardar el DPI en el modelo para pasarlo al formulario
         return "paciente-agendar-cita";
     }
 
     @PostMapping("/citas/agendar")
     public String procesarAgendarCita(@Valid @ModelAttribute("citaRequest") CitaRequest citaRequest,
                                       BindingResult bindingResult,
+                                      @RequestParam(required = false) String dpiParam,
                                       Authentication authentication,
                                       RedirectAttributes redirectAttributes,
                                       Model model) { // Añadir Model para errores de negocio
@@ -95,31 +104,33 @@ public class PacientePortalController {
         logger.info("Iniciando procesarAgendarCita para el usuario: {}", authentication.getName());
         logger.debug("CitaRequest recibido: {}", citaRequest);
 
-        // Mover la asignación de pacienteId y sucursalId aquí, antes de la validación del formulario
         String username = authentication.getName();
-        Paciente paciente = null; // Declarar paciente aquí
+        Paciente paciente = null; 
         try {
-            paciente = pacienteRepository.findByUsername(username)
-                    .orElseThrow(() -> new RecursoNoEncontradoException("Paciente no encontrado para el usuario: " + username));
+            // Si hay un dpiParam y el usuario no es un paciente (es recepcionista), buscamos por DPI
+            if (dpiParam != null && !dpiParam.isBlank() && !authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_Paciente"))) {
+                paciente = pacienteRepository.findByDpi(dpiParam)
+                        .orElseThrow(() -> new RecursoNoEncontradoException("Paciente no encontrado con DPI: " + dpiParam));
+                citaRequest.setInterna(true); // Evitar que se cancele automáticamente
+            } else {
+                paciente = pacienteRepository.findByUsername(username)
+                        .orElseThrow(() -> new RecursoNoEncontradoException("Paciente no encontrado para el usuario: " + username));
+                citaRequest.setInterna(false);
+            }
+            
             citaRequest.setPacienteId(paciente.getId());
             logger.debug("PacienteId asignado a citaRequest: {}", citaRequest.getPacienteId());
 
-            UsuarioResponse medico = usuarioService.buscarPorId(citaRequest.getMedicoId());
-            if (medico.getSucursalId() == null) {
-                logger.error("Médico {} no tiene sucursal asignada.", medico.getId());
-                throw new IllegalArgumentException("El médico seleccionado no tiene una sucursal asignada.");
+            if (citaRequest.getSucursalId() == null) {
+                throw new IllegalArgumentException("Debe seleccionar una sucursal.");
             }
-            citaRequest.setSucursalId(medico.getSucursalId());
-            logger.debug("SucursalId asignado a citaRequest: {}", citaRequest.getSucursalId());
 
         } catch (RecursoNoEncontradoException | IllegalArgumentException e) {
-            // Si hay un error al obtener paciente o médico, añadirlo a los errores de validación
-            bindingResult.reject("global.error", e.getMessage()); // Añadir un error global
-            // Si hay errores de validación, volvemos a mostrar el formulario
-            // y pasamos las especialidades de nuevo
-            model.addAttribute("especialidades", especialidadService.listarTodos());
+            bindingResult.reject("global.error", e.getMessage()); 
+            model.addAttribute("sucursales", sucursalService.listarTodos());
             model.addAttribute("citaRequest", citaRequest);
-            model.addAttribute("errorNegocio", e.getMessage()); // Mostrar el error en la alerta
+            model.addAttribute("errorNegocio", e.getMessage()); 
+            model.addAttribute("dpiParam", dpiParam);
             return "paciente-agendar-cita";
         }
 
@@ -127,8 +138,9 @@ public class PacientePortalController {
         // O simplemente confiar en las validaciones del servicio si estos campos son críticos
         if (bindingResult.hasErrors()) { // Re-validar si se añadieron errores en el try-catch de arriba
             logger.warn("Errores de validación encontrados después de asignar IDs: {}", bindingResult.getAllErrors());
-            model.addAttribute("especialidades", especialidadService.listarTodos());
+            model.addAttribute("sucursales", sucursalService.listarTodos());
             model.addAttribute("citaRequest", citaRequest);
+            model.addAttribute("dpiParam", dpiParam);
             return "paciente-agendar-cita";
         }
         
@@ -139,6 +151,11 @@ public class PacientePortalController {
             CitaResponse citaCreada = citaService.crear(citaRequest); // Capturar la respuesta
             logger.info("Cita agendada exitosamente para el paciente {} con el médico {}", citaRequest.getPacienteId(), citaRequest.getMedicoId());
 
+            if (dpiParam != null && !dpiParam.isBlank() && !authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_Paciente"))) {
+                redirectAttributes.addFlashAttribute("mensajeExito", "Cita #" + citaCreada.getId() + " agendada exitosamente. El paciente debe pasar a caja a pagar.");
+                return "redirect:/recepcion?term=" + dpiParam + "&tipoBusqueda=dpi";
+            }
+
             redirectAttributes.addFlashAttribute("mensajeExito", "¡Cita agendada exitosamente! Ahora complete el pago.");
             return "redirect:/paciente/portal/citas/" + citaCreada.getId() + "/pagar"; // Redirigir a la página de pago
 
@@ -147,13 +164,13 @@ public class PacientePortalController {
             // Capturar errores de negocio (ej: médico no encontrado, horario no disponible)
             model.addAttribute("errorNegocio", e.getMessage());
             // Volver a cargar las especialidades y el citaRequest para que no se pierdan los datos
-            model.addAttribute("especialidades", especialidadService.listarTodos());
+            model.addAttribute("sucursales", sucursalService.listarTodos());
             model.addAttribute("citaRequest", citaRequest);
             return "paciente-agendar-cita";
         } catch (Exception e) { // Capturar cualquier otra excepción inesperada
             logger.error("Error inesperado al procesar agendar cita: {}", e.getMessage(), e);
             model.addAttribute("errorNegocio", "Ocurrió un error inesperado al agendar la cita.");
-            model.addAttribute("especialidades", especialidadService.listarTodos());
+            model.addAttribute("sucursales", sucursalService.listarTodos());
             model.addAttribute("citaRequest", citaRequest);
             return "paciente-agendar-cita";
         }
@@ -214,7 +231,7 @@ public class PacientePortalController {
 
             model.addAttribute("citaRequest", citaRequest);
             model.addAttribute("citaOriginalId", id); // Para saber qué cita estamos reagendando
-            model.addAttribute("especialidades", especialidadService.listarTodos());
+            model.addAttribute("sucursales", sucursalService.listarTodos());
 
             return "paciente-agendar-cita"; // Reutilizamos el mismo formulario
         } catch (RecursoNoEncontradoException | IllegalArgumentException e) {
@@ -238,26 +255,21 @@ public class PacientePortalController {
         logger.info("Iniciando procesarReagendarCita para cita {} por el usuario {}", id, authentication.getName());
         logger.debug("CitaRequest recibido para reagendamiento: {}", citaRequest);
 
-        // Mover la asignación de pacienteId y sucursalId aquí, antes de la validación del formulario
         String username = authentication.getName();
-        Paciente paciente = null; // Declarar paciente aquí
+        Paciente paciente = null; 
         try {
             paciente = pacienteRepository.findByUsername(username)
                     .orElseThrow(() -> new RecursoNoEncontradoException("Paciente no encontrado para el usuario: " + username));
             citaRequest.setPacienteId(paciente.getId());
             logger.debug("PacienteId asignado a citaRequest para reagendamiento: {}", citaRequest.getPacienteId());
 
-            UsuarioResponse medico = usuarioService.buscarPorId(citaRequest.getMedicoId());
-            if (medico.getSucursalId() == null) {
-                logger.error("Médico {} no tiene sucursal asignada.", medico.getId());
-                throw new IllegalArgumentException("El médico seleccionado no tiene una sucursal asignada.");
+            if (citaRequest.getSucursalId() == null) {
+                throw new IllegalArgumentException("Debe seleccionar una sucursal.");
             }
-            citaRequest.setSucursalId(medico.getSucursalId());
-            logger.debug("SucursalId asignado a citaRequest para reagendamiento: {}", citaRequest.getSucursalId());
 
         } catch (RecursoNoEncontradoException | IllegalArgumentException e) {
             bindingResult.reject("global.error", e.getMessage());
-            model.addAttribute("especialidades", especialidadService.listarTodos());
+            model.addAttribute("sucursales", sucursalService.listarTodos());
             model.addAttribute("citaRequest", citaRequest);
             model.addAttribute("citaOriginalId", id); // Mantener el ID original
             model.addAttribute("errorNegocio", e.getMessage());
@@ -266,7 +278,7 @@ public class PacientePortalController {
 
         if (bindingResult.hasErrors()) {
             logger.warn("Errores de validación encontrados para reagendamiento: {}", bindingResult.getAllErrors());
-            model.addAttribute("especialidades", especialidadService.listarTodos());
+            model.addAttribute("sucursales", sucursalService.listarTodos());
             model.addAttribute("citaRequest", citaRequest);
             model.addAttribute("citaOriginalId", id); // Mantener el ID original
             return "paciente-agendar-cita";
@@ -284,14 +296,14 @@ public class PacientePortalController {
         } catch (RecursoNoEncontradoException | IllegalArgumentException e) {
             logger.error("Error de negocio al reagendar cita {}: {}", id, e.getMessage());
             model.addAttribute("errorNegocio", e.getMessage());
-            model.addAttribute("especialidades", especialidadService.listarTodos());
+            model.addAttribute("sucursales", sucursalService.listarTodos());
             model.addAttribute("citaRequest", citaRequest);
             model.addAttribute("citaOriginalId", id); // Mantener el ID original
             return "paciente-agendar-cita";
         } catch (Exception e) {
             logger.error("Error inesperado al procesar reagendamiento de cita {}: {}", id, e.getMessage(), e);
             model.addAttribute("errorNegocio", "Ocurrió un error inesperado al reagendar la cita.");
-            model.addAttribute("especialidades", especialidadService.listarTodos());
+            model.addAttribute("sucursales", sucursalService.listarTodos());
             model.addAttribute("citaRequest", citaRequest);
             model.addAttribute("citaOriginalId", id); // Mantener el ID original
             return "paciente-agendar-cita";
@@ -299,25 +311,48 @@ public class PacientePortalController {
     }
 
 
+    @GetMapping("/especialidades-por-sucursal")
+    @ResponseBody
+    public List<com.sistemamedico.app.dto.SedeEspecialidadResponse> getEspecialidadesPorSucursal(@RequestParam Long sucursalId) {
+        return sedeEspecialidadService.listarPorSucursal(sucursalId);
+    }
+
     @GetMapping("/medicos-por-especialidad")
     @ResponseBody
-    public List<UsuarioResponse> getMedicosPorEspecialidad(@RequestParam Long especialidadId) {
+    public List<UsuarioResponse> getMedicosPorEspecialidad(
+            @RequestParam Long especialidadId, 
+            @RequestParam(required = false) Long sucursalId) {
+        if (sucursalId != null) {
+            return usuarioService.listarMedicosPorEspecialidadYSucursal(especialidadId, sucursalId);
+        }
         return usuarioService.listarMedicosPorEspecialidad(especialidadId);
     }
 
     @GetMapping("/horarios-disponibles")
     @ResponseBody
     public List<Map<String, Object>> getHorariosDisponibles(@RequestParam Long medicoId, 
-                                                             @RequestParam String fecha) { // Eliminamos especialidadId
-        // Convertir la fecha string (YYYY-MM-DD) a LocalDate
+                                                             @RequestParam String fecha) {
         LocalDate fechaDate = LocalDate.parse(fecha);
-        
-        // Obtener horarios ocupados del CitaService
         List<LocalTime> horariosOcupados = citaService.buscarHorariosOcupados(medicoId, fechaDate, Optional.empty());
 
-        // Generar todos los horarios posibles (8:00 - 17:30 en intervalos de 30 min)
         List<Map<String, Object>> horariosDisponibles = new ArrayList<>();
-        for (int hora = 8; hora < 18; hora++) {
+        java.time.DayOfWeek diaSemana = fechaDate.getDayOfWeek();
+
+        // Si es domingo, no hay horarios
+        if (diaSemana == java.time.DayOfWeek.SUNDAY) {
+            return horariosDisponibles;
+        }
+
+        // Lunes a Viernes: 8:00 a 17:00
+        // Sábado: 8:00 a 12:00
+        int horaFin = (diaSemana == java.time.DayOfWeek.SATURDAY) ? 12 : 17;
+
+        for (int hora = 8; hora < horaFin; hora++) {
+            // Lunes a Viernes almuerzo de 13:00 a 14:00
+            if (diaSemana != java.time.DayOfWeek.SATURDAY && hora == 13) {
+                continue;
+            }
+
             for (int minuto = 0; minuto < 60; minuto += 30) {
                 LocalTime horarioPosible = LocalTime.of(hora, minuto);
                 boolean disponible = !horariosOcupados.contains(horarioPosible);
@@ -355,15 +390,71 @@ public class PacientePortalController {
             }
 
             model.addAttribute("cita", cita);
-            // Aquí se podría añadir el tiempo de expiración de la reserva si se gestiona en el backend
-            // Por ahora, el temporizador se iniciará en el frontend al cargar la página de pago.
-            return "paciente-pago-cita"; // Nombre de la nueva plantilla HTML
+            return "paciente-pago-cita";
         } catch (RecursoNoEncontradoException e) {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
             return "redirect:/paciente/portal/citas";
         } catch (Exception e) {
             logger.error("Error al mostrar formulario de pago para cita {}: {}", citaId, e.getMessage(), e);
             redirectAttributes.addFlashAttribute("error", "Ocurrió un error inesperado al cargar la página de pago.");
+            return "redirect:/paciente/portal/citas";
+        }
+    }
+
+    @PostMapping("/citas/{citaId}/pagar")
+    public String procesarPagoCita(@PathVariable Long citaId, 
+                                   @RequestParam String cardNumber, 
+                                   Authentication authentication, 
+                                   RedirectAttributes redirectAttributes) {
+        String username = authentication.getName();
+        try {
+            Paciente paciente = pacienteRepository.findByUsername(username)
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Paciente no encontrado"));
+
+            CitaResponse cita = citaService.buscarPorId(citaId);
+
+            if (!cita.getPacienteDpi().equals(paciente.getDpi())) {
+                redirectAttributes.addFlashAttribute("error", "No tiene permisos.");
+                return "redirect:/paciente/portal/citas";
+            }
+
+            // Crear el PagoRequest
+            com.sistemamedico.app.dto.PagoRequest pagoRequest = new com.sistemamedico.app.dto.PagoRequest();
+            pagoRequest.setTipoOrigen("CITA");
+            pagoRequest.setReferenciaId(citaId);
+            // El costo en línea de momento lo pondremos fijo en 250, o se podría traer de la cita si tuviera un campo de costo.
+            pagoRequest.setMonto(new java.math.BigDecimal("250.00")); 
+            pagoRequest.setMetodoPago("VISA_CREDITO"); // Corrección de enum: VISA -> VISA_CREDITO
+            pagoRequest.setSucursalId(cita.getSucursalId());
+            
+            String ultimos4 = cardNumber.replaceAll("\\s+", "");
+            if (ultimos4.length() >= 4) {
+                ultimos4 = ultimos4.substring(ultimos4.length() - 4);
+            } else {
+                ultimos4 = "0000";
+            }
+            pagoRequest.setUltimosDigitosTarjeta(ultimos4);
+
+            com.sistemamedico.app.dto.PagoResponse pago = pagoService.crear(pagoRequest);
+
+            redirectAttributes.addFlashAttribute("mensajeExito", "¡Pago realizado exitosamente! Número de transacción: " + pago.getNumeroTransaccion() + ". Su cita ha sido confirmada.");
+            return "redirect:/paciente/portal/citas/" + citaId + "/comprobante?pagoId=" + pago.getId();
+        } catch (Exception e) {
+            logger.error("Error al procesar pago: {}", e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("error", "Error al procesar el pago: " + e.getMessage());
+            return "redirect:/paciente/portal/citas/" + citaId + "/pagar";
+        }
+    }
+
+    @GetMapping("/citas/{citaId}/comprobante")
+    public String mostrarComprobante(@PathVariable Long citaId, @RequestParam Long pagoId, Model model, Authentication authentication) {
+        try {
+            CitaResponse cita = citaService.buscarPorId(citaId);
+            com.sistemamedico.app.dto.PagoResponse pago = pagoService.buscarPorId(pagoId);
+            model.addAttribute("cita", cita);
+            model.addAttribute("pago", pago);
+            return "paciente-pago-exitoso";
+        } catch (Exception e) {
             return "redirect:/paciente/portal/citas";
         }
     }

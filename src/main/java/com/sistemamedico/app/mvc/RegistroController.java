@@ -36,7 +36,8 @@ public class RegistroController {
     @PostMapping("/registro")
     public String procesarRegistro(@Valid @ModelAttribute("pacienteRequest") PacienteRequest pacienteRequest,
                                    BindingResult bindingResult,
-                                   RedirectAttributes redirectAttributes) {
+                                   RedirectAttributes redirectAttributes,
+                                   org.springframework.security.core.Authentication authentication) {
 
         if (bindingResult.hasErrors()) {
             redirectAttributes.addFlashAttribute("org.springframework.validation.BindingResult.pacienteRequest", bindingResult);
@@ -46,6 +47,14 @@ public class RegistroController {
 
         try {
             pacienteService.crearPaciente(pacienteRequest);
+            
+            // Si es un empleado (Recepcionista) quien lo registró, lo devolvemos a Recepción
+            if (authentication != null && authentication.isAuthenticated() && !authentication.getName().equals("anonymousUser")) {
+                redirectAttributes.addFlashAttribute("mensajeExito", "Paciente " + pacienteRequest.getNombreCompleto() + " registrado exitosamente.");
+                return "redirect:/recepcion?term=" + pacienteRequest.getDpi() + "&tipoBusqueda=dpi";
+            }
+            
+            // Si es el paciente registrándose a sí mismo desde fuera, va al login
             redirectAttributes.addFlashAttribute("mensajeExito", "¡Registro exitoso! Ahora puedes iniciar sesión.");
             return "redirect:/login";
         } catch (IllegalArgumentException e) {

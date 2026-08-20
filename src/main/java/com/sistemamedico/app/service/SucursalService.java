@@ -40,7 +40,7 @@ public class SucursalService {
     }
 
     public List<SucursalResponse> listarTodos() {
-        return sucursalRepository.findAll().stream().map(this::mapearAResponse).toList();
+        return sucursalRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "id")).stream().map(this::mapearAResponse).toList();
     }
 
     @Transactional

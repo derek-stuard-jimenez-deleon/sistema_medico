@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
@@ -6,77 +6,137 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link th:href="@{/css/estilos.css}" rel="stylesheet">
+    <style>
+        .wizard-step { display: none; }
+        .wizard-step.active { display: block; }
+        .step-indicator {
+            display: flex; justify-content: space-between; margin-bottom: 2rem; position: relative;
+        }
+        .step-indicator::before {
+            content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 2px;
+            background: #e9ecef; z-index: 1; transform: translateY(-50%);
+        }
+        .step-item {
+            width: 35px; height: 35px; border-radius: 50%; background: #e9ecef;
+            color: #6c757d; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; z-index: 2; border: 3px solid #fff; transition: all 0.3s ease;
+        }
+        .step-item.active { background: #0056b3; color: white; }
+        .step-item.completed { background: #28a745; color: white; }
+    </style>
 </head>
 <body>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 
 <main class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="fw-bold mb-0" th:text="${citaOriginalId != null ? 'Reagendar Cita' : 'Agendar Nueva Cita'}">Agendar Nueva Cita</h4>
         <a th:href="@{/paciente/portal/citas}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Volver a Mis Citas</a>
     </div>
 
-    <div class="card card-panel p-4 mx-auto" style="max-width: 720px;">
+    <div class="card card-panel p-4 mx-auto shadow-sm" style="max-width: 800px;">
         <!-- Alerta para errores de negocio -->
         <div class="alert alert-danger" th:if="${errorNegocio}" th:text="${errorNegocio}"></div>
 
-        <form th:action="${citaOriginalId != null ? '/paciente/portal/citas/reagendar/' + citaOriginalId : '/paciente/portal/citas/agendar'}" th:object="${citaRequest}" method="post">
-            <!-- Campo oculto para el ID de la cita original en caso de reagendamiento -->
-            <input type="hidden" id="citaOriginalId" th:value="${citaOriginalId}" />
+        <!-- Indicador de progreso -->
+        <div class="step-indicator px-4">
+            <div class="step-item active" id="indicator-1">1</div>
+            <div class="step-item" id="indicator-2">2</div>
+            <div class="step-item" id="indicator-3">3</div>
+            <div class="step-item" id="indicator-4">4</div>
+            <div class="step-item" id="indicator-5">5</div>
+        </div>
+        <div class="text-center mb-4 text-muted fw-bold" id="step-title">Paso 1: Seleccione una Sucursal</div>
 
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label for="especialidad" class="form-label">Especialidad</label>
-                    <select id="especialidad" th:field="*{especialidadId}" class="form-select"
-                            th:classappend="${#fields.hasErrors('especialidadId')} ? 'is-invalid' : ''" required>
-                        <option value="">Seleccione una especialidad</option>
-                        <option th:each="especialidad : ${especialidades}"
-                                th:value="${especialidad.id}"
-                                th:text="${especialidad.nombre}">
-                            Medicina General
+        <form id="wizardForm" th:action="${citaOriginalId != null ? '/paciente/portal/citas/reagendar/' + citaOriginalId : '/paciente/portal/citas/agendar'}" th:object="${citaRequest}" method="post">
+            <input type="hidden" id="citaOriginalId" th:value="${citaOriginalId}" />
+            <input type="hidden" name="dpiParam" th:value="${dpiParam}" th:if="${dpiParam != null}" />
+
+            <!-- PASO 1: Sucursal -->
+            <div class="wizard-step active" id="step-1">
+                <div class="mb-4">
+                    <label for="sucursal" class="form-label fw-bold">Seleccione la Sucursal</label>
+                    <select id="sucursal" th:field="*{sucursalId}" class="form-select form-select-lg" th:classappend="${#fields.hasErrors('sucursalId')} ? 'is-invalid' : ''" required>
+                        <option value="">-- Elija una sucursal --</option>
+                        <option th:each="sucursal : ${sucursales}"
+                                th:if="${sucursal.activo}"
+                                th:value="${sucursal.id}"
+                                th:text="${sucursal.nombre}">
                         </option>
+                    </select>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('sucursalId')}" th:errors="*{sucursalId}"></div>
+                </div>
+            </div>
+
+            <!-- PASO 2: Especialidad -->
+            <div class="wizard-step" id="step-2">
+                <div class="mb-4">
+                    <label for="especialidad" class="form-label fw-bold">Seleccione la Especialidad</label>
+                    <select id="especialidad" th:field="*{especialidadId}" class="form-select form-select-lg" th:classappend="${#fields.hasErrors('especialidadId')} ? 'is-invalid' : ''" required disabled>
+                        <option value="">-- Elija una especialidad --</option>
                     </select>
                     <div class="invalid-feedback" th:if="${#fields.hasErrors('especialidadId')}" th:errors="*{especialidadId}"></div>
                 </div>
+            </div>
 
-                <div class="col-md-6">
-                    <label for="medico" class="form-label">Médico</label>
-                    <select id="medico" th:field="*{medicoId}" class="form-select"
-                            th:classappend="${#fields.hasErrors('medicoId')} ? 'is-invalid' : ''" required>
-                        <option value="">Seleccione un médico</option>
+            <!-- PASO 3: Médico -->
+            <div class="wizard-step" id="step-3">
+                <div class="mb-4">
+                    <label for="medico" class="form-label fw-bold">Seleccione el Médico</label>
+                    <select id="medico" th:field="*{medicoId}" class="form-select form-select-lg" th:classappend="${#fields.hasErrors('medicoId')} ? 'is-invalid' : ''" required disabled>
+                        <option value="">-- Elija un médico --</option>
                     </select>
                     <div class="invalid-feedback" th:if="${#fields.hasErrors('medicoId')}" th:errors="*{medicoId}"></div>
                 </div>
+            </div>
 
-                <div class="col-md-6">
-                    <label for="fecha" class="form-label">Fecha</label>
-                    <input type="date" id="fecha" class="form-control"
-                           th:classappend="${#fields.hasErrors('fechaHora')} ? 'is-invalid' : ''" required>
-                    <div class="invalid-feedback" th:if="${#fields.hasErrors('fechaHora')}" th:errors="*{fechaHora}"></div>
+            <!-- PASO 4: Fecha y Hora -->
+            <div class="wizard-step" id="step-4">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label for="fecha" class="form-label fw-bold">Fecha de la Cita</label>
+                        <input type="date" id="fecha" class="form-control form-control-lg" th:classappend="${#fields.hasErrors('fechaHora')} ? 'is-invalid' : ''" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="hora" class="form-label fw-bold">Hora Disponible</label>
+                        <select id="hora" class="form-select form-control-lg" required disabled>
+                            <option value="">-- Seleccione fecha primero --</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('fechaHora')}" th:errors="*{fechaHora}"></div>
+                    </div>
                 </div>
-
-                <div class="col-md-6">
-                    <label for="hora" class="form-label">Hora Disponible</label>
-                    <select id="hora" class="form-select" required disabled>
-                        <option value=""></option>
-                    </select>
-                </div>
-
-                <!-- Campo oculto que combina fecha + hora para enviar como fechaHora -->
                 <input type="hidden" id="fechaHora" th:field="*{fechaHora}" />
+            </div>
 
-                <div class="col-12">
-                    <label for="motivo" class="form-label">Motivo de la Cita (Opcional)</label>
-                    <textarea id="motivo" th:field="*{motivoVisita}" class="form-control" rows="3"
-                              th:classappend="${#fields.hasErrors('motivoVisita')} ? 'is-invalid' : ''"></textarea>
-                    <div class="invalid-feedback" th:if="${#fields.hasErrors('motivoVisita')}" th:errors="*{motivoVisita}"></div>
+            <!-- PASO 5: Confirmar -->
+            <div class="wizard-step" id="step-5">
+                <div class="card bg-light mb-4">
+                    <div class="card-header bg-primary text-white fw-bold">
+                        Resumen de la Cita
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item"><strong>Sucursal:</strong> <span id="resumen-sucursal"></span></li>
+                        <li class="list-group-item"><strong>Especialidad:</strong> <span id="resumen-especialidad"></span></li>
+                        <li class="list-group-item"><strong>Médico:</strong> <span id="resumen-medico"></span></li>
+                        <li class="list-group-item"><strong>Fecha y Hora:</strong> <span id="resumen-fechahora"></span></li>
+                    </ul>
+                </div>
+                <div class="mb-4">
+                    <label for="motivo" class="form-label fw-bold">Motivo de la Cita (Opcional)</label>
+                    <textarea id="motivo" th:field="*{motivoVisita}" class="form-control" rows="3" placeholder="Describa brevemente el motivo de su visita..."></textarea>
                 </div>
             </div>
 
             <hr class="my-4">
 
-            <div class="d-flex justify-content-end gap-2">
-                <button type="submit" class="btn btn-sistema" th:text="${citaOriginalId != null ? 'Reagendar Cita' : 'Agendar Cita'}">Agendar Cita</button>
+            <div class="d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary" id="btnPrev" style="display: none;"><i class="bi bi-chevron-left"></i> Anterior</button>
+                <div class="ms-auto">
+                    <button type="button" class="btn btn-primary" id="btnNext">Siguiente <i class="bi bi-chevron-right"></i></button>
+                    <button type="submit" class="btn btn-success" id="btnSubmit" style="display: none;"><i class="bi bi-check-circle"></i> Confirmar y Agendar Cita</button>
+                </div>
             </div>
         </form>
     </div>
@@ -84,145 +144,198 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Establecer fecha mínima hoy
+    let currentStep = 1;
+    const totalSteps = 5;
+    const stepTitles = [
+        "Paso 1: Seleccione una Sucursal",
+        "Paso 2: Seleccione la Especialidad",
+        "Paso 3: Seleccione el Médico",
+        "Paso 4: Seleccione Fecha y Hora",
+        "Paso 5: Confirme su Cita"
+    ];
+
     document.addEventListener('DOMContentLoaded', function() {
+        // Inicializar UI
+        updateWizardUI();
+
+        // Configurar min date
         const fechaInput = document.getElementById('fecha');
         const ahora = new Date();
         const ano = ahora.getFullYear();
         const mes = String(ahora.getMonth() + 1).padStart(2, '0');
         const dia = String(ahora.getDate()).padStart(2, '0');
+        fechaInput.setAttribute('min', `${ano}-${mes}-${dia}`);
 
-        const minDate = `${ano}-${mes}-${dia}`;
-        fechaInput.setAttribute('min', minDate);
+        // Manejar botones Next/Prev
+        document.getElementById('btnNext').addEventListener('click', () => {
+            if (validateStep(currentStep)) {
+                currentStep++;
+                updateWizardUI();
+                if (currentStep === 5) populateSummary();
+            }
+        });
 
-        // Disparar el evento change en especialidad si ya tiene un valor (ej. al volver de un error de validación)
-        const especialidadSelect = document.getElementById('especialidad');
-        if (especialidadSelect.value) {
-            especialidadSelect.dispatchEvent(new Event('change'));
-        }
+        document.getElementById('btnPrev').addEventListener('click', () => {
+            currentStep--;
+            updateWizardUI();
+        });
+
+        // Listeners para carga dinámica
+        document.getElementById('sucursal').addEventListener('change', function() {
+            document.getElementById('especialidad').disabled = true;
+            document.getElementById('medico').disabled = true;
+            document.getElementById('hora').disabled = true;
+            if(this.value) loadEspecialidades(this.value);
+        });
+
+        document.getElementById('especialidad').addEventListener('change', function() {
+            document.getElementById('medico').disabled = true;
+            document.getElementById('hora').disabled = true;
+            const sucursalId = document.getElementById('sucursal').value;
+            if(this.value && sucursalId) loadMedicos(this.value, sucursalId);
+        });
+
+        document.getElementById('fecha').addEventListener('change', function() {
+            document.getElementById('hora').disabled = true;
+            const medicoId = document.getElementById('medico').value;
+            if(this.value && medicoId) loadHorarios(medicoId, this.value);
+        });
+
+        document.getElementById('hora').addEventListener('change', function() {
+            const fecha = document.getElementById('fecha').value;
+            if (fecha && this.value) {
+                document.getElementById('fechaHora').value = `${fecha}T${this.value}:00`;
+            } else {
+                document.getElementById('fechaHora').value = '';
+            }
+        });
     });
 
-    // Verificar si se cumplen las 3 condiciones para habilitar hora
-    function verificarCondiciones() {
-        const especialidadId = document.getElementById('especialidad').value;
-        const medicoId = document.getElementById('medico').value;
-        const fecha = document.getElementById('fecha').value;
-        const horaSelect = document.getElementById('hora');
+    function updateWizardUI() {
+        // Ocultar todos, mostrar actual
+        document.querySelectorAll('.wizard-step').forEach(el => el.classList.remove('active'));
+        document.getElementById('step-' + currentStep).classList.add('active');
 
-        if (especialidadId && medicoId && fecha) {
-            // Habilitar el campo y cargar horarios
-            horaSelect.disabled = false;
-            cargarHorarios();
+        // Titulo
+        document.getElementById('step-title').textContent = stepTitles[currentStep - 1];
+
+        // Indicadores
+        for(let i=1; i<=totalSteps; i++) {
+            const ind = document.getElementById('indicator-' + i);
+            ind.classList.remove('active', 'completed');
+            if(i < currentStep) ind.classList.add('completed');
+            if(i === currentStep) ind.classList.add('active');
+        }
+
+        // Botones
+        document.getElementById('btnPrev').style.display = currentStep === 1 ? 'none' : 'block';
+        if (currentStep === totalSteps) {
+            document.getElementById('btnNext').style.display = 'none';
+            document.getElementById('btnSubmit').style.display = 'inline-block';
         } else {
-            // Deshabilitar el campo si no se cumplen las condiciones
-            horaSelect.disabled = true;
-            horaSelect.innerHTML = '<option value=""></option>';
+            document.getElementById('btnNext').style.display = 'inline-block';
+            document.getElementById('btnSubmit').style.display = 'none';
         }
     }
 
-    // Cargar horarios cuando se selecciona especialidad y médico
-    function cargarHorarios() {
-        const fecha = document.getElementById('fecha').value;
-        const medicoId = document.getElementById('medico').value;
-        const especialidadId = document.getElementById('especialidad').value;
-        const citaOriginalId = document.getElementById('citaOriginalId').value; // Obtener el ID de la cita original
-
-        // Limpiar opciones anteriores
-        const horaSelect = document.getElementById('hora');
-        horaSelect.innerHTML = '<option value="">Cargando horarios...</option>';
-
-        if (!fecha || !medicoId || !especialidadId) {
-            horaSelect.innerHTML = '<option value=""></option>';
-            return;
+    function validateStep(step) {
+        if (step === 1) {
+            const val = document.getElementById('sucursal').value;
+            if(!val) { alert('Debe seleccionar una sucursal.'); return false; }
         }
-
-        let url = `/paciente/portal/horarios-disponibles?fecha=${fecha}&medicoId=${medicoId}&especialidadId=${especialidadId}`;
-        if (citaOriginalId) {
-            url += `&citaId=${citaOriginalId}`; // Añadir citaId si estamos reagendando
+        if (step === 2) {
+            const val = document.getElementById('especialidad').value;
+            if(!val) { alert('Debe seleccionar una especialidad.'); return false; }
         }
+        if (step === 3) {
+            const val = document.getElementById('medico').value;
+            if(!val) { alert('Debe seleccionar un médico.'); return false; }
+        }
+        if (step === 4) {
+            const val = document.getElementById('fechaHora').value;
+            if(!val) { alert('Debe seleccionar una fecha y una hora.'); return false; }
+        }
+        return true;
+    }
 
-        fetch(url)
-            .then(response => response.json())
-            .then(horarios => {
-                horaSelect.innerHTML = '<option value="">Seleccione una hora</option>';
-
-                if (horarios.length === 0) {
-                    horaSelect.innerHTML += '<option disabled>No hay horarios disponibles</option>';
-                    return;
-                }
-
-                horarios.forEach(horario => {
-                    const option = document.createElement('option');
-                    option.value = horario.hora; // Formato: HH:MM
-                    option.textContent = horario.hora + (horario.disponible ? '' : ' (Ocupado)');
-                    option.disabled = !horario.disponible;
-
-                    // Mostrar ocupados con fondo gris
-                    if (!horario.disponible) {
-                        option.style.backgroundColor = '#e9ecef';
-                        option.style.color = '#999';
-                    }
-
-                    horaSelect.appendChild(option);
+    function loadEspecialidades(sucursalId) {
+        fetch(`/paciente/portal/especialidades-por-sucursal?sucursalId=${sucursalId}`)
+            .then(res => res.json())
+            .then(data => {
+                const select = document.getElementById('especialidad');
+                select.innerHTML = '<option value="">-- Elija una especialidad --</option>';
+                if(data.length === 0) select.innerHTML += '<option disabled>No hay especialidades</option>';
+                data.forEach(item => {
+                    const opt = document.createElement('option');
+                    opt.value = item.especialidadId;
+                    opt.text = item.especialidadNombre;
+                    select.appendChild(opt);
                 });
-            })
-            .catch(error => {
-                console.error('Error cargando horarios:', error);
-                horaSelect.innerHTML = '<option disabled>Error cargando horarios</option>';
+                select.disabled = false;
             });
     }
 
-    // Actualizar campo oculto fechaHora cuando se selecciona fecha y hora
-    function actualizarFechaHora() {
-        const fecha = document.getElementById('fecha').value;
-        const hora = document.getElementById('hora').value;
-        const fechaHoraInput = document.getElementById('fechaHora');
-
-        if (fecha && hora) {
-            // Combinar en formato ISO: YYYY-MM-DDTHH:MM:SS
-            const fechaHoraCompleta = `${fecha}T${hora}:00`;
-            fechaHoraInput.value = fechaHoraCompleta;
-            console.log('FechaHora actualizada:', fechaHoraCompleta);
-        } else {
-            fechaHoraInput.value = ''; // Limpiar si no están completos
-        }
+    function loadMedicos(especialidadId, sucursalId) {
+        fetch(`/paciente/portal/medicos-por-especialidad?especialidadId=${especialidadId}&sucursalId=${sucursalId}`)
+            .then(res => res.json())
+            .then(data => {
+                const select = document.getElementById('medico');
+                select.innerHTML = '<option value="">-- Elija un médico --</option>';
+                if(data.length === 0) select.innerHTML += '<option disabled>No hay médicos disponibles</option>';
+                data.forEach(item => {
+                    const opt = document.createElement('option');
+                    opt.value = item.id;
+                    opt.text = item.nombreCompleto;
+                    select.appendChild(opt);
+                });
+                select.disabled = false;
+            });
     }
 
-    // Event listeners
-    document.getElementById('especialidad').addEventListener('change', verificarCondiciones);
-    document.getElementById('medico').addEventListener('change', verificarCondiciones);
-    document.getElementById('fecha').addEventListener('change', verificarCondiciones);
-    document.getElementById('hora').addEventListener('change', actualizarFechaHora);
+    function loadHorarios(medicoId, fecha) {
+        const select = document.getElementById('hora');
+        select.innerHTML = '<option value="">Cargando...</option>';
+        select.disabled = true;
 
-    // Carga inicial de médicos por especialidad
-    document.getElementById('especialidad').addEventListener('change', function() {
-        const especialidadId = this.value;
+        const citaOriginalId = document.getElementById('citaOriginalId').value;
+        let url = `/paciente/portal/horarios-disponibles?fecha=${fecha}&medicoId=${medicoId}`;
+        if (citaOriginalId) url += `&citaId=${citaOriginalId}`;
 
-        if (especialidadId) {
-            fetch(`/paciente/portal/medicos-por-especialidad?especialidadId=${especialidadId}`)
-                .then(response => response.json())
-                .then(medicos => {
-                    const medicoSelect = document.getElementById('medico');
-                    medicoSelect.innerHTML = '<option value="">Seleccione un médico</option>';
-                    if (medicos.length === 0) {
-                        medicoSelect.innerHTML += '<option disabled>No hay médicos disponibles</option>';
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                select.innerHTML = '<option value="">-- Elija una hora --</option>';
+                if(data.length === 0) {
+                    select.innerHTML += '<option disabled>Sin horarios</option>';
+                    return;
+                }
+                data.forEach(h => {
+                    const opt = document.createElement('option');
+                    opt.value = h.hora;
+                    opt.text = h.hora + (h.disponible ? '' : ' (Ocupado)');
+                    opt.disabled = !h.disponible;
+                    if(!h.disponible) {
+                        opt.style.backgroundColor = '#e9ecef';
+                        opt.style.color = '#999';
                     }
-                    medicos.forEach(medico => {
-                        const option = document.createElement('option');
-                        option.value = medico.id;
-                        option.text = medico.nombreCompleto;
-                        medicoSelect.appendChild(option);
-                    });
-                    // Si ya hay un médico seleccionado (ej. al volver de un error), intentar cargar horarios
-                    if (medicoSelect.value) {
-                        verificarCondiciones();
-                    }
-                })
-                .catch(error => console.error('Error cargando médicos:', error));
-        } else {
-            document.getElementById('medico').innerHTML = '<option value="">Seleccione un médico</option>';
-        }
-    });
+                    select.appendChild(opt);
+                });
+                select.disabled = false;
+            });
+    }
+
+    function populateSummary() {
+        const suc = document.getElementById('sucursal');
+        const esp = document.getElementById('especialidad');
+        const med = document.getElementById('medico');
+        const f = document.getElementById('fecha').value;
+        const h = document.getElementById('hora').value;
+
+        document.getElementById('resumen-sucursal').textContent = suc.options[suc.selectedIndex].text;
+        document.getElementById('resumen-especialidad').textContent = esp.options[esp.selectedIndex].text;
+        document.getElementById('resumen-medico').textContent = med.options[med.selectedIndex].text;
+        document.getElementById('resumen-fechahora').textContent = `${f} a las ${h}`;
+    }
 </script>
 </body>
 </html>

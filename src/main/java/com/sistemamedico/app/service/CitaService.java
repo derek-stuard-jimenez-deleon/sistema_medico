@@ -60,7 +60,7 @@ public class CitaService {
         if (!"Medico".equalsIgnoreCase(medico.getRol().getNombre())) {
             throw new IllegalArgumentException("El usuario seleccionado no tiene rol de Médico.");
         }
-        
+
         // Validar que el médico tenga una especialidad asignada
         if (medico.getEspecialidad() == null) {
             throw new IllegalArgumentException("El médico seleccionado no tiene una especialidad asignada.");
@@ -97,7 +97,10 @@ public class CitaService {
         cita.setMotivoVisita(request.getMotivoVisita());
         cita.setEstado(Cita.EstadoCita.RESERVADA);
         cita.setTipo(Cita.TipoCita.NORMAL);
-        cita.setReservaExpiraEn(LocalDateTime.now().plusMinutes(5)); // Establecer el tiempo de expiración de la reserva
+        
+        if (!request.isInterna()) {
+            cita.setReservaExpiraEn(LocalDateTime.now().plusMinutes(5)); // Establecer el tiempo de expiración de la reserva en 5 minutos (CU-04)
+        }
 
         Cita guardada = citaRepository.save(cita);
 
@@ -130,6 +133,7 @@ public class CitaService {
                 Cita.EstadoCita.RESERVADA,
                 Cita.EstadoCita.PENDIENTE_PAGO,
                 Cita.EstadoCita.PAGADA,
+                Cita.EstadoCita.PACIENTE_PRESENTE,
                 Cita.EstadoCita.ATENDIDA,
                 Cita.EstadoCita.REAGENDADA, // Incluir citas reagendadas
                 Cita.EstadoCita.CANCELADA // Incluir citas canceladas
@@ -139,6 +143,24 @@ public class CitaService {
 
     public List<CitaResponse> listarTodas() {
         return citaRepository.findAllByOrderByIdDesc().stream().map(this::mapearAResponse).toList();
+    }
+
+    // Nuevo método para buscar la cola de pacientes para enfermería (CU-7)
+    public List<CitaResponse> buscarCitasParaEnfermeria() {
+        LocalDateTime inicioDia = LocalDate.now().atStartOfDay();
+        LocalDateTime finDia = LocalDate.now().atTime(LocalTime.MAX);
+
+        // Buscamos las que ya pagaron, ya reportaron presencia o están a medias en signos
+        List<Cita.EstadoCita> estadosEspera = Arrays.asList(
+                Cita.EstadoCita.PAGADA,
+                Cita.EstadoCita.PACIENTE_PRESENTE,
+                Cita.EstadoCita.EN_SIGNOS_VITALES
+        );
+
+        return citaRepository.findByEstadoInAndFechaHoraBetweenOrderByFechaHoraAsc(estadosEspera, inicioDia, finDia)
+                .stream()
+                .map(this::mapearAResponse)
+                .toList();
     }
 
     // Nuevo método para buscar horarios ocupados de un médico en una fecha, con opción de excluir una cita
@@ -182,8 +204,29 @@ public class CitaService {
         if (cita.getEstado() == Cita.EstadoCita.CANCELADA) {
             throw new IllegalArgumentException("No se puede verificar una cita cancelada.");
         }
+        
+        if (cita.getEstado() == Cita.EstadoCita.PENDIENTE_PAGO) {
+            throw new IllegalArgumentException("La cita del paciente tiene estado 'Pendiente de pago'. Debe realizar el pago en caja antes de ser atendido.");
+        }
 
         cita.setVerificada(true);
+        cita.setEstado(Cita.EstadoCita.PACIENTE_PRESENTE);
+        return mapearAResponse(citaRepository.save(cita));
+    }
+
+    @Transactional
+    public CitaResponse marcarVerificadaEmergencia(Long id) {
+        Cita cita = citaRepository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Cita no encontrada."));
+
+        if (cita.getEstado() == Cita.EstadoCita.CANCELADA) {
+            throw new IllegalArgumentException("No se puede verificar una cita cancelada.");
+        }
+
+        cita.setVerificada(true);
+        // Emergencia salta el pago, pero puede ser marcado. Según el CU-05, pasa a signos vitales.
+        cita.setEstado(Cita.EstadoCita.PACIENTE_PRESENTE);
+        cita.setMotivoVisita(cita.getMotivoVisita() + " [EMERGENCIA]");
         return mapearAResponse(citaRepository.save(cita));
     }
 
@@ -272,7 +315,6 @@ public class CitaService {
 
         return mapearAResponse(guardada);
     }
-
 
     private CitaResponse mapearAResponse(Cita cita) {
         CitaResponse dto = new CitaResponse();

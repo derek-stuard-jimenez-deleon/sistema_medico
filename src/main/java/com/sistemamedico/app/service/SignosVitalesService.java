@@ -50,8 +50,11 @@ public class SignosVitalesService {
         Cita cita = citaRepository.findById(request.getCitaId())
                 .orElseThrow(() -> new RecursoNoEncontradoException("Cita no encontrada."));
 
-        if (cita.getEstado() != Cita.EstadoCita.PAGADA) {
-            throw new IllegalArgumentException("Solo se pueden tomar signos vitales de citas pagadas.");
+        // CORRECCIÓN 1: Permitimos registrar signos si la cita está Pagada, Presente o En Signos.
+        if (cita.getEstado() != Cita.EstadoCita.PAGADA &&
+                cita.getEstado() != Cita.EstadoCita.PACIENTE_PRESENTE &&
+                cita.getEstado() != Cita.EstadoCita.EN_SIGNOS_VITALES) {
+            throw new IllegalArgumentException("El estado actual de la cita no permite tomar signos vitales.");
         }
 
         if (signosVitalesRepository.findByCitaId(cita.getId()).isPresent()) {
@@ -76,9 +79,12 @@ public class SignosVitalesService {
 
         SignosVitales guardado = signosVitalesRepository.save(signos);
 
-        // RN-CU07-06 Post-condición: Si es emergencia, cambiar estado de la cita
+        // CORRECCIÓN 2: Post-condición de estado final.
         if (request.isEsEmergencia()) {
             citaService.cambiarEstado(cita.getId(), Cita.EstadoCita.PENDIENTE_CONSULTA_EMERGENCIA);
+        } else {
+            // Si es un flujo normal, ahora debe pasar al Dr.
+            citaService.cambiarEstado(cita.getId(), Cita.EstadoCita.EN_ESPERA_CONSULTA);
         }
 
         return mapearAResponse(guardado);

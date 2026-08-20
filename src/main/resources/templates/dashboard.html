@@ -2,69 +2,186 @@
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard - Sistema Medico</title>
+    <title>Dashboard - Sistema Medico 2026</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <link th:href="@{/css/estilos.css}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <style>
+        .module-card { transition: transform 0.2s, box-shadow 0.2s; }
+        .module-card:hover { transform: translateY(-5px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important; }
+        .module-btn { border-radius: 8px; font-weight: 500; }
+        .bg-sistema { background-color: #2c3e50; }
+        .text-sistema { color: #2c3e50; }
+    </style>
 </head>
-<body>
-<div th:replace="~{fragments/navbar :: navbar}"></div>
+<body class="bg-light">
 
-<div class="container mt-4">
-    <div class="card card-panel p-4">
-        <h4 class="fw-bold mb-1">Bienvenido al sistema</h4>
-        <p class="text-muted">Selecciona una opción para comenzar.</p>
-        <div>
-            <!-- Botón para Pacientes, Admin y Médicos -->
-            <a th:href="@{/paciente/portal/citas}" class="btn btn-sistema" sec:authorize="hasAnyRole('PACIENTE')">
-                <i class="bi bi-calendar-check"></i> Mis Citas
-            </a>
-            <a th:href="@{/citas}" class="btn btn-sistema" sec:authorize="hasAnyRole('ADMIN', 'MEDICO')">
-                <i class="bi bi-calendar-check"></i> Ver Citas
-            </a>
-
-            <!-- Botón para Admin/Recepcionista -->
-            <a th:href="@{/pacientes}" class="btn btn-sistema ms-2" sec:authorize="hasAnyRole('ADMIN', 'RECEPCIONISTA')">
-                <i class="bi bi-people"></i> Pacientes
-            </a>
-
-            <!-- Botón solo para Admin -->
-            <a th:href="@{/usuarios}" class="btn btn-sistema ms-2" sec:authorize="hasRole('ADMIN')">
-                <i class="bi bi-person-badge"></i> Usuarios
-            </a>
-
-            <!-- Botón para Cajero -->
-            <a th:href="@{/caja/citas}" class="btn btn-sistema ms-2" sec:authorize="hasRole('CAJERO')">
-                <i class="bi bi-receipt"></i> Cobro Citas
-            </a>
-
-            <!-- Botón para Cajero -->
-            <a th:href="@{/caja/laboratorio}" class="btn btn-sistema ms-2" sec:authorize="hasRole('CAJERO')">
-                <i class="bi bi-cash-coin"></i> Cobro Laboratorio
-            </a>
-
-            <!-- Botón para Recepcionista -->
-            <a th:href="@{/recepcion}" class="btn btn-sistema ms-2" sec:authorize="hasRole('RECEPCIONISTA')">
-                <i class="bi bi-clipboard-check"></i> Recepción
-            </a>
-
-            <!-- Botón para Admin/Farmacia -->
-            <a th:href="@{/inventario/movimientos}" class="btn btn-sistema ms-2" sec:authorize="hasAnyRole('ADMIN', 'FARMACEUTICO')">
-                <i class="bi bi-box-seam"></i> Bitácora Inventario
-            </a>
-
-            <!-- Botón para Enfermería -->
-            <a th:href="@{/enfermeria}" class="btn btn-sistema ms-2" sec:authorize="hasAnyRole('ADMIN', 'ENFERMERO', 'MEDICO')">
-                <i class="bi bi-clipboard2-pulse"></i> Signos Vitales
-            </a>
-
-            <!-- Botón para Médico -->
-            <a th:href="@{/consulta-medica}" class="btn btn-sistema ms-2" sec:authorize="hasAnyRole('ADMIN', 'MEDICO')">
-                <i class="bi bi-file-earmark-medical"></i> Consulta Médica
-            </a>
-
+<nav class="navbar navbar-expand-lg navbar-dark" style="background-color: #1a252f;">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold" href="/dashboard"><i class="bi bi-heart-pulse-fill text-danger me-2"></i>Sistema Medico 2026</a>
+        <div class="d-flex align-items-center">
+            <span class="text-light me-3"><i class="bi bi-person-circle me-1"></i> <span sec:authentication="name">Usuario</span></span>
+            <form th:action="@{/logout}" method="post" class="m-0">
+                <button class="btn btn-outline-light btn-sm" type="submit"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</button>
+            </form>
         </div>
     </div>
+</nav>
+
+<div class="container mt-4 mb-5">
+    <div class="d-flex justify-content-between align-items-end mb-4">
+        <div>
+            <h3 class="fw-bold text-primary"><i class="bi bi-grid-1x2"></i> Panel Principal</h3>
+            <p class="text-muted mb-0">Selecciona el módulo con el que deseas trabajar hoy.</p>
+        </div>
+    </div>
+
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        
+        <!-- Módulo de Pacientes (Solo pacientes) -->
+        <div class="col" sec:authorize="hasRole('PACIENTE')">
+            <div class="card h-100 border-0 shadow-sm module-card">
+                <div class="card-header bg-sistema text-white fw-bold">
+                    <i class="bi bi-person-heart"></i> Portal de Pacientes
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-3">
+                        <a th:href="@{/paciente/portal/citas}" class="btn btn-outline-primary text-start module-btn">
+                            <i class="bi bi-calendar-check text-sistema me-2"></i> Mis Citas Programadas
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Módulo: Recepción y Citas -->
+        <div class="col" sec:authorize="hasAnyRole('ADMIN', 'ADMIN_SEDE', 'RECEPCIONISTA')">
+            <div class="card h-100 border-0 shadow-sm module-card">
+                <div class="card-header text-white fw-bold" style="background-color: #2c3e50;">
+                    <i class="bi bi-front"></i> Recepción y Pacientes
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a th:href="@{/recepcion}" class="btn btn-outline-secondary text-start module-btn">
+                            <i class="bi bi-building-check me-2"></i> Sala de Recepción (Hoy)
+                        </a>
+                        <a th:href="@{/pacientes}" class="btn btn-outline-secondary text-start module-btn">
+                            <i class="bi bi-people me-2"></i> Directorio de Pacientes
+                        </a>
+                        <a th:href="@{/citas}" class="btn btn-outline-secondary text-start module-btn" sec:authorize="hasAnyRole('ADMIN', 'ADMIN_SEDE')">
+                            <i class="bi bi-calendar3 me-2"></i> Gestor Global de Citas
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Módulo: Atención Médica -->
+        <div class="col" sec:authorize="hasAnyRole('ADMIN', 'ADMIN_SEDE', 'MEDICO', 'ENFERMERO')">
+            <div class="card h-100 border-0 shadow-sm module-card">
+                <div class="card-header bg-primary text-white fw-bold">
+                    <i class="bi bi-heart-pulse"></i> Atención Médica
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a th:href="@{/enfermeria}" class="btn btn-outline-primary text-start module-btn" sec:authorize="hasAnyRole('ADMIN', 'ADMIN_SEDE', 'ENFERMERO', 'MEDICO')">
+                            <i class="bi bi-clipboard2-pulse me-2"></i> Triaje (Signos Vitales)
+                        </a>
+                        <a th:href="@{/agenda}" class="btn btn-outline-primary text-start module-btn" sec:authorize="hasRole('MEDICO')">
+                            <i class="bi bi-calendar-week me-2"></i> Mi Agenda Médica
+                        </a>
+                        <a th:href="@{/consulta-medica}" class="btn btn-outline-primary text-start module-btn" sec:authorize="hasAnyRole('ADMIN', 'ADMIN_SEDE', 'MEDICO')">
+                            <i class="bi bi-file-earmark-medical me-2"></i> Consulta Médica Activa
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Módulo: Servicios Clínicos -->
+        <div class="col" sec:authorize="hasAnyRole('ADMIN', 'ADMIN_SEDE', 'LABORATORISTA')">
+            <div class="card h-100 border-0 shadow-sm module-card">
+                <div class="card-header text-white fw-bold" style="background-color: #0d6efd;">
+                    <i class="bi bi-droplet"></i> Servicios Clínicos
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a th:href="@{/laboratorio}" class="btn btn-outline-primary text-start module-btn">
+                            <i class="bi bi-file-medical me-2"></i> Procesar Laboratorios
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Módulo: Farmacia e Inventario -->
+        <div class="col" sec:authorize="hasAnyRole('ADMIN', 'ADMIN_SEDE', 'FARMACEUTICO')">
+            <div class="card h-100 border-0 shadow-sm module-card">
+                <div class="card-header bg-success text-white fw-bold">
+                    <i class="bi bi-capsule"></i> Farmacia e Inventario
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a th:href="@{/farmacia}" class="btn btn-outline-success text-start module-btn">
+                            <i class="bi bi-prescription me-2"></i> Despacho de Recetas
+                        </a>
+                        <a th:href="@{/inventario}" class="btn btn-outline-success text-start module-btn">
+                            <i class="bi bi-box-seam me-2"></i> Inventario Actual
+                        </a>
+                        <a th:href="@{/inventario/movimientos}" class="btn btn-outline-success text-start module-btn">
+                            <i class="bi bi-journal-text me-2"></i> Bitácora de Movimientos
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Módulo: Caja y Pagos -->
+        <div class="col" sec:authorize="hasAnyRole('ADMIN', 'ADMIN_SEDE', 'CAJERO')">
+            <div class="card h-100 border-0 shadow-sm module-card">
+                <div class="card-header text-white fw-bold" style="background-color: #198754;">
+                    <i class="bi bi-cash-register"></i> Caja y Pagos
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a th:href="@{/caja/citas}" class="btn btn-outline-success text-start module-btn">
+                            <i class="bi bi-receipt me-2"></i> Cobro de Citas
+                        </a>
+                        <a th:href="@{/caja/laboratorio}" class="btn btn-outline-success text-start module-btn">
+                            <i class="bi bi-cash-coin me-2"></i> Cobro de Laboratorio
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Módulo: Administración -->
+        <div class="col" sec:authorize="hasAnyRole('ADMIN', 'ADMIN_SEDE')">
+            <div class="card h-100 border-0 shadow-sm module-card">
+                <div class="card-header bg-warning text-dark fw-bold">
+                    <i class="bi bi-gear-fill"></i> Configuración y Catálogos
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a th:href="@{/admin/usuarios}" class="btn btn-outline-dark text-start module-btn">
+                            <i class="bi bi-people-fill me-2"></i> Usuarios y Empleados
+                        </a>
+                        <a th:href="@{/catalogos/especialidades}" class="btn btn-outline-dark text-start module-btn" sec:authorize="hasRole('ADMIN')">
+                            <i class="bi bi-journal-medical me-2"></i> Especialidades
+                        </a>
+                        <a th:href="@{/catalogos/roles}" class="btn btn-outline-dark text-start module-btn" sec:authorize="hasRole('ADMIN')">
+                            <i class="bi bi-person-badge me-2"></i> Roles del Sistema
+                        </a>
+                        <a th:href="@{/catalogos/sucursales}" class="btn btn-outline-dark text-start module-btn" sec:authorize="hasRole('ADMIN')">
+                            <i class="bi bi-hospital me-2"></i> Sucursales / Clínicas
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -15,7 +15,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     // Busca un usuario por su nombre de usuario. Correcto.
     Optional<Usuario> findByUsername(String username);
 
-    // Busca usuarios por nombre de usuario con paginación
+    // Busca usuarios por nombre de usuario con paginaciÃ³n
     Page<Usuario> findByUsernameContaining(String username, Pageable pageable);
 
     // Verifica si un nombre de usuario ya existe. Correcto.
@@ -24,12 +24,20 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     // Verifica si un DPI ya existe. Correcto.
     boolean existsByDpi(String dpi);
 
-    // Busca médicos por rol y especialidad
+    Page<Usuario> findBySucursalId(Long sucursalId, Pageable pageable);
+
+    // Busca mÃ©dicos por rol y especialidad
     @Query("SELECT u FROM Usuario u WHERE u.rol.nombre = :rolNombre AND u.especialidad.id = :especialidadId")
     List<Usuario> findByRolNombreAndEspecialidadId(@Param("rolNombre") String rolNombre, 
                                                     @Param("especialidadId") Long especialidadId);
 
-    // Nuevo método para buscar Usuario por ID y cargar eager la especialidad y sucursal
+    // Busca mÃ©dicos por rol, especialidad y sucursal
+    @Query("SELECT u FROM Usuario u WHERE u.rol.nombre = :rolNombre AND u.especialidad.id = :especialidadId AND u.sucursal.id = :sucursalId")
+    List<Usuario> findByRolNombreAndEspecialidadIdAndSucursalId(@Param("rolNombre") String rolNombre, 
+                                                                @Param("especialidadId") Long especialidadId,
+                                                                @Param("sucursalId") Long sucursalId);
+
+    // Nuevo mÃ©todo para buscar Usuario por ID y cargar eager la especialidad y sucursal
     @Query("SELECT u FROM Usuario u JOIN FETCH u.rol JOIN FETCH u.sucursal LEFT JOIN FETCH u.especialidad WHERE u.id = :id")
     Optional<Usuario> findByIdWithEagerRelations(@Param("id") Long id);
 }

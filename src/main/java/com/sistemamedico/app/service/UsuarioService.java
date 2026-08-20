@@ -11,8 +11,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List; // Importar List
-import java.util.stream.Collectors; // Importar Collectors
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class UsuarioService {
@@ -38,8 +38,7 @@ public class UsuarioService {
     @Transactional
     public UsuarioResponse crear(UsuarioRequest request) {
         if (usuarioRepository.existsByUsername(request.getUsername())) {
-            throw new IllegalArgumentException(
-                    "El nombre de usuario " + request.getUsername() + " ya se encuentra registrado. Por favor, elija otro.");
+            throw new IllegalArgumentException("El nombre de usuario " + request.getUsername() + " ya se encuentra registrado.");
         }
         if (request.getDpi() != null && usuarioRepository.existsByDpi(request.getDpi())) {
             throw new IllegalArgumentException("El DPI ingresado ya se encuentra registrado.");
@@ -50,12 +49,10 @@ public class UsuarioService {
         Sucursal sucursal = sucursalRepository.findById(request.getSucursalId())
                 .orElseThrow(() -> new RecursoNoEncontradoException("Sucursal no encontrada."));
 
-        // RN-CU01-14: especialidad obligatoria solo si el rol es Medico
         Especialidad especialidad = null;
-        boolean esMedico = "Medico".equalsIgnoreCase(rol.getNombre());
-        if (esMedico) {
+        if ("Medico".equalsIgnoreCase(rol.getNombre())) {
             if (request.getEspecialidadId() == null) {
-                throw new IllegalArgumentException("Debe seleccionar una especialidad para el médico.");
+                throw new IllegalArgumentException("Debe seleccionar una especialidad para el medico.");
             }
             especialidad = especialidadRepository.findById(request.getEspecialidadId())
                     .orElseThrow(() -> new RecursoNoEncontradoException("Especialidad no encontrada."));
@@ -78,33 +75,42 @@ public class UsuarioService {
         return mapearAResponse(guardado);
     }
 
+    public UsuarioResponse buscarPorUsername(String username) {
+        return usuarioRepository.findByUsername(username).map(this::mapearAResponse).orElseThrow(() -> new RecursoNoEncontradoException("No encontrado"));
+    }
+
     public UsuarioResponse buscarPorId(Long id) {
-        // Usamos el nuevo método del repositorio para cargar la especialidad y sucursal eager
         Usuario usuario = usuarioRepository.findByIdWithEagerRelations(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado."));
         return mapearAResponse(usuario);
     }
 
-    // RN-CU01-01 / RN-CU01-02: busqueda por nombre con paginacion (20/pagina se configura en el Controller)
     public Page<UsuarioResponse> buscarPorNombre(String nombre, Pageable pageable) {
         return usuarioRepository.findByUsernameContaining(nombre, pageable)
                 .map(this::mapearAResponse);
     }
 
-    public Page<UsuarioResponse> listarTodos(Pageable pageable) {
-        return usuarioRepository.findAll(pageable).map(this::mapearAResponse);
+    public Page<UsuarioResponse> listarParaSede(Long sucursalId, Pageable pageable) {
+        return usuarioRepository.findBySucursalId(sucursalId, org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), org.springframework.data.domain.Sort.by("id").ascending())).map(this::mapearAResponse);
     }
 
-    // Nuevo método para listar médicos por especialidad
+    public Page<UsuarioResponse> listarTodos(Pageable pageable) {
+        return usuarioRepository.findAll(org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), org.springframework.data.domain.Sort.by("id").ascending())).map(this::mapearAResponse);
+    }
+
     public List<UsuarioResponse> listarMedicosPorEspecialidad(Long especialidadId) {
-        // Asumo que tienes un método en UsuarioRepository para buscar usuarios por rol y especialidad
-        // O que el rol "Medico" se puede filtrar aquí
         return usuarioRepository.findByRolNombreAndEspecialidadId("Medico", especialidadId)
                 .stream()
                 .map(this::mapearAResponse)
                 .collect(Collectors.toList());
     }
 
+    public List<UsuarioResponse> listarMedicosPorEspecialidadYSucursal(Long especialidadId, Long sucursalId) {
+        return usuarioRepository.findByRolNombreAndEspecialidadIdAndSucursalId("Medico", especialidadId, sucursalId)
+                .stream()
+                .map(this::mapearAResponse)
+                .collect(Collectors.toList());
+    }
 
     @Transactional
     public UsuarioResponse actualizar(Long id, UsuarioRequest request) {
@@ -116,11 +122,21 @@ public class UsuarioService {
         Sucursal sucursal = sucursalRepository.findById(request.getSucursalId())
                 .orElseThrow(() -> new RecursoNoEncontradoException("Sucursal no encontrada."));
 
+        Especialidad especialidad = null;
+        if ("Medico".equalsIgnoreCase(rol.getNombre())) {
+            if (request.getEspecialidadId() == null) {
+                throw new IllegalArgumentException("Debe seleccionar una especialidad para el medico.");
+            }
+            especialidad = especialidadRepository.findById(request.getEspecialidadId())
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Especialidad no encontrada."));
+        }
+
         usuario.setNombreCompleto(request.getNombreCompleto());
         usuario.setTelefono(request.getTelefono());
         usuario.setNumeroSeguro(request.getNumeroSeguro());
         usuario.setRol(rol);
         usuario.setSucursal(sucursal);
+        usuario.setEspecialidad(especialidad);
         usuario.setActivo(request.isActivo());
 
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
@@ -131,7 +147,6 @@ public class UsuarioService {
         return mapearAResponse(actualizado);
     }
 
-    // Borrado logico: NUNCA se hace delete fisico
     @Transactional
     public void eliminar(Long id, Long usuarioQueElimina) {
         Usuario usuario = usuarioRepository.findById(id)
@@ -150,10 +165,18 @@ public class UsuarioService {
         dto.setTelefono(usuario.getTelefono());
         dto.setNumeroSeguro(usuario.getNumeroSeguro());
         dto.setRolNombre(usuario.getRol().getNombre());
-        dto.setSucursalId(usuario.getSucursal().getId()); // Asignar sucursalId
+        dto.setSucursalId(usuario.getSucursal().getId());
         dto.setSucursalNombre(usuario.getSucursal().getNombre());
         dto.setEspecialidadNombre(usuario.getEspecialidad() != null ? usuario.getEspecialidad().getNombre() : null);
         dto.setActivo(usuario.isActivo());
         return dto;
+    }
+
+    @Transactional
+    public void restablecerContrasena(Long id) {
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado."));
+        usuario.setPasswordHash(passwordEncoder.encode("password123"));
+        usuarioRepository.save(usuario);
     }
 }

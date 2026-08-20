@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
@@ -65,8 +65,39 @@
                             <textarea name="motivoConsulta" class="form-control" rows="2" maxlength="2000" required></textarea>
                         </div>
 
-                        <div class="col-12">
-                            <label class="form-label">Hallazgos clínicos</label>
+                        <!-- SECCIÓN: RESULTADOS DE LABORATORIO -->
+                        <div th:if="${ordenesPorCita.get(cita.id) != null && !ordenesPorCita.get(cita.id).isEmpty()}" class="col-12 card p-3 border-info mb-3 bg-light">
+                            <h6 class="fw-bold text-info"><i class="bi bi-file-earmark-medical"></i> Resultados de Laboratorio Previos</h6>
+                            <div th:each="orden : ${ordenesPorCita.get(cita.id)}" class="mb-3">
+                                <strong th:text="'Orden #' + ${orden.id} + ' (' + ${#temporals.format(orden.fechaCreacion, 'dd/MM/yyyy')} + ')'"></strong>
+                                <table class="table table-sm table-bordered mt-2 bg-white">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Examen</th>
+                                            <th>Resultado</th>
+                                            <th>Ref.</th>
+                                            <th>Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:each="res : ${resultadosPorOrden.get(orden.id)}">
+                                            <td th:text="${res.detalleOrden.examen.nombre}"></td>
+                                            <td>
+                                                <strong th:text="${res.valor} + ' ' + ${res.unidadMedida}"></strong>
+                                            </td>
+                                            <td th:text="${res.detalleOrden.examen.rangoReferenciaMin} + ' - ' + ${res.detalleOrden.examen.rangoReferenciaMax} + ' ' + ${res.detalleOrden.examen.unidadMedida}"></td>
+                                            <td>
+                                                <span th:if="${res.fueraDeRango}" class="badge bg-danger"><i class="bi bi-exclamation-triangle"></i> Fuera de rango</span>
+                                                <span th:unless="${res.fueraDeRango}" class="badge bg-success">Normal</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label">Hallazgos Clínicos</label>
                             <textarea name="hallazgosClinicos" class="form-control" rows="3" maxlength="5000" required></textarea>
                         </div>
 
@@ -80,11 +111,75 @@
                         </div>
 
                         <div class="col-12">
-                            <label class="form-label">Plan de tratamiento</label>
-                            <textarea name="planTratamiento" class="form-control" rows="3" maxlength="5000" required></textarea>
+                            <label class="form-label fw-bold">Plan de tratamiento</label>
+                            <textarea name="planTratamiento" class="form-control mb-3" rows="3" maxlength="5000" required></textarea>
+                        </div>
+                        
+                        <!-- SECCIÓN LABORATORIO -->
+                        <div class="col-12 card p-3 mb-3 bg-light">
+                            <h6 class="fw-bold"><i class="bi bi-droplet-half text-danger"></i> Solicitar Exámenes de Laboratorio</h6>
+                            <p class="small text-muted mb-2">Seleccione los exámenes que el paciente debe realizarse. Se generará automáticamente una orden de pago en caja.</p>
+                            <div class="row">
+                                <div class="col-md-4 mb-2" th:each="examen : ${examenesCatalogo}">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="examenesSeleccionados" th:value="${examen.id}" th:id="'ex_' + ${examen.id}">
+                                        <label class="form-check-label" th:for="'ex_' + ${examen.id}" th:text="${examen.nombre} + ' (Q' + ${examen.precio} + ')'"></label>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="col-12 d-flex justify-content-end gap-2">
+                        <!-- SECCIÓN RECETA MÉDICA -->
+                        <div class="col-12 card p-3 mb-3 bg-light">
+                            <h6 class="fw-bold"><i class="bi bi-capsule text-info"></i> Receta Médica (Farmacia)</h6>
+                            <p class="small text-muted mb-2">Agregue los medicamentos para que Farmacia pueda despacharlos.</p>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered" th:id="'tablaReceta_' + ${cita.id}">
+                                    <thead class="table-secondary">
+                                        <tr>
+                                            <th>Medicamento</th>
+                                            <th>Dosis</th>
+                                            <th>Frecuencia</th>
+                                            <th>Días</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody th:id="'bodyReceta_' + ${cita.id}">
+                                        <!-- Filas dinámicas -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary mt-2" th:onclick="'agregarFilaReceta(' + ${cita.id} + ')'">
+                                <i class="bi bi-plus-circle"></i> Agregar Medicamento
+                            </button>
+                        </div>
+
+                        <!-- SECCIÓN CITA DE SEGUIMIENTO -->
+                        <div class="col-12 card p-3 mb-3 border-warning bg-light">
+                            <h6 class="fw-bold text-warning-emphasis"><i class="bi bi-calendar-plus text-warning"></i> Cita de Seguimiento (CU-11)</h6>
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" name="agendarSeguimiento" id="agendarSeguimiento" onchange="toggleSeguimiento()">
+                                <label class="form-check-label" for="agendarSeguimiento">El paciente requiere agendar una cita de seguimiento</label>
+                            </div>
+                            
+                            <div id="panelSeguimiento" class="row d-none">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Fecha y Hora de la Próxima Cita</label>
+                                    <input type="datetime-local" name="fechaSeguimiento" id="fechaSeguimiento" class="form-control">
+                                    <div class="form-text">Debe ser una fecha futura.</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Tipo de Seguimiento</label>
+                                    <select name="tipoSeguimiento" id="tipoSeguimiento" class="form-select">
+                                        <option value="">Seleccione...</option>
+                                        <option value="Monitoreo de condicion">Monitoreo de condición</option>
+                                        <option value="Revision de resultados">Revisión de resultados</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 d-flex justify-content-end gap-2 mt-3">
                             <button type="submit" name="cerrar" value="false" class="btn btn-outline-secondary">
                                 <i class="bi bi-save"></i> Guardar sin cerrar
                             </button>
@@ -99,6 +194,46 @@
     </div>
 </main>
 
+<!-- Template oculto para el select de medicamentos -->
+<select id="medicamentoTemplate" style="display:none;">
+    <option th:each="med : ${medicamentosCatalogo}" th:value="${med.id}" th:text="${med.nombre}"></option>
+</select>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function agregarFilaReceta(citaId) {
+        const tbody = document.getElementById('bodyReceta_' + citaId);
+        const templateSelect = document.getElementById('medicamentoTemplate').innerHTML;
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><select name="medicamentoIds" class="form-select form-select-sm" required>${templateSelect}</select></td>
+            <td><input type="text" name="dosis" class="form-control form-control-sm" placeholder="Ej. 1 tableta" required></td>
+            <td><input type="text" name="frecuencia" class="form-control form-control-sm" placeholder="Ej. cada 8 horas" required></td>
+            <td><input type="number" name="duracion" class="form-control form-control-sm" placeholder="Ej. 5" required min="1"></td>
+            <td><button type="button" class="btn btn-sm btn-danger" onclick="this.closest('tr').remove()"><i class="bi bi-trash"></i></button></td>
+        `;
+        tbody.appendChild(tr);
+    }
+
+    function toggleSeguimiento() {
+        const agendar = document.getElementById('agendarSeguimiento').checked;
+        const panel = document.getElementById('panelSeguimiento');
+        const fecha = document.getElementById('fechaSeguimiento');
+        const tipo = document.getElementById('tipoSeguimiento');
+        
+        if (agendar) {
+            panel.classList.remove('d-none');
+            fecha.required = true;
+            tipo.required = true;
+        } else {
+            panel.classList.add('d-none');
+            fecha.required = false;
+            tipo.required = false;
+            fecha.value = '';
+            tipo.value = '';
+        }
+    }
+</script>
 </body>
 </html>

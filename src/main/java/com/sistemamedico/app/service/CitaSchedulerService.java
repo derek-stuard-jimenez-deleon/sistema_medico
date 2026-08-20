@@ -27,27 +27,28 @@ public class CitaSchedulerService {
      * después de un tiempo determinado (ej. 5 minutos).
      * Se ejecuta cada minuto.
      */
-    @Scheduled(fixedRate = 20, timeUnit = TimeUnit.SECONDS) // Ejecutar cada 20 SEGUNDOS
+    @Scheduled(fixedRate = 60, timeUnit = TimeUnit.SECONDS) // Ejecutar cada 60 SEGUNDOS
     @Transactional
-    public void eliminarCitasExpiradas() { // Renombrado el método para reflejar la acción
-        logger.info("Iniciando tarea programada: eliminación de citas expiradas.");
+    public void cancelarCitasExpiradas() { 
+        logger.info("Iniciando tarea programada: cancelación de citas expiradas.");
         LocalDateTime now = LocalDateTime.now();
 
         // Buscar citas en estado RESERVADA cuya reservaExpiraEn sea anterior al momento actual
         List<Cita> citasExpiradas = citaRepository.findByEstadoAndReservaExpiraEnBefore(Cita.EstadoCita.RESERVADA, now);
 
         if (citasExpiradas.isEmpty()) {
-            logger.info("No se encontraron citas RESERVADAS expiradas para eliminar.");
+            logger.debug("No se encontraron citas RESERVADAS expiradas para cancelar.");
             return;
         }
 
-        logger.info("Se encontraron {} citas RESERVADAS expiradas para eliminar.", citasExpiradas.size());
+        logger.info("Se encontraron {} citas RESERVADAS expiradas para cancelar.", citasExpiradas.size());
 
         for (Cita cita : citasExpiradas) {
-            citaRepository.delete(cita); // Eliminar la cita completamente
-            logger.info("Cita {} (Médico: {}, Paciente: {}, Fecha: {}) ha sido ELIMINADA por expiración de tiempo de pago.",
+            cita.setEstado(Cita.EstadoCita.CANCELADA);
+            citaRepository.save(cita); // Guardar el cambio de estado a CANCELADA
+            logger.info("Cita {} (Médico: {}, Paciente: {}, Fecha: {}) ha sido CANCELADA automáticamente por expiración de tiempo de pago.",
                     cita.getId(), cita.getMedico().getNombreCompleto(), cita.getPaciente().getNombreCompleto(), cita.getFechaHora());
         }
-        logger.info("Tarea programada finalizada: {} citas eliminadas.", citasExpiradas.size());
+        logger.info("Tarea programada finalizada: {} citas canceladas.", citasExpiradas.size());
     }
 }

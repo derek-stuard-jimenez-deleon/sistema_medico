@@ -1,0 +1,116 @@
+﻿<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Agenda Médica - Sistema Medico 2026</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link th:href="@{/css/estilos.css}" rel="stylesheet">
+    <!-- FullCalendar CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+    <style>
+        #calendar {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .fc-event {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="container mt-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="fw-bold mb-0"><i class="bi bi-calendar-check"></i> Mi Agenda Médica (CU-16)</h4>
+        <a th:href="@{/dashboard}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+
+    <!-- Leyenda de colores -->
+    <div class="mb-3 d-flex gap-3 text-muted small">
+        <span><i class="bi bi-circle-fill text-primary"></i> Agendada / Reservada</span>
+        <span><i class="bi bi-circle-fill text-warning"></i> En Espera</span>
+        <span><i class="bi bi-circle-fill text-success"></i> Atendida</span>
+        <span><i class="bi bi-circle-fill text-info"></i> En Curso</span>
+        <span><i class="bi bi-circle-fill text-danger"></i> Cancelada</span>
+    </div>
+
+    <div id="calendar"></div>
+</div>
+
+<!-- Modal para Detalle de Cita -->
+<div class="modal fade" id="modalCita" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold">Detalle de la Cita</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p><strong>Paciente:</strong> <span id="citaPaciente"></span></p>
+        <p><strong>Estado:</strong> <span id="citaEstado" class="badge bg-secondary"></span></p>
+        <p><strong>Fecha y Hora:</strong> <span id="citaFecha"></span></p>
+        <p><strong>Sucursal:</strong> <span id="citaSucursal"></span></p>
+      </div>
+      <div class="modal-footer">
+        <a id="btnIniciarConsulta" href="#" class="btn btn-sistema">Iniciar Consulta</a>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- FullCalendar JS -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/es.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var calendarEl = document.getElementById('calendar');
+        var modal = new bootstrap.Modal(document.getElementById('modalCita'));
+
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridWeek', // Vista semanal por defecto
+            locale: 'es',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+            },
+            slotMinTime: '06:00:00', // Horario de atencion de clinica
+            slotMaxTime: '22:00:00',
+            allDaySlot: false,
+            events: '/api/agenda/eventos',
+            eventClick: function(info) {
+                var props = info.event.extendedProps;
+                $('#citaPaciente').text(props.paciente);
+                $('#citaEstado').text(props.estado);
+                $('#citaFecha').text(info.event.start.toLocaleString());
+                $('#citaSucursal').text(props.sucursal);
+                
+                // Si la cita esta en espera, permitir iniciar consulta
+                if(props.estado === 'EN_ESPERA_CONSULTA' || props.estado === 'EN_CURSO') {
+                    $('#btnIniciarConsulta').show();
+                    $('#btnIniciarConsulta').attr('href', '/consulta-medica/' + info.event.id);
+                } else {
+                    $('#btnIniciarConsulta').hide();
+                }
+
+                modal.show();
+            }
+        });
+
+        calendar.render();
+    });
+</script>
+</body>
+</html>

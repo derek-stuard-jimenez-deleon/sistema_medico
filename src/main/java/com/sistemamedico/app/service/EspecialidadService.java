@@ -7,6 +7,8 @@ import com.sistemamedico.app.model.Especialidad;
 import com.sistemamedico.app.repository.EspecialidadRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 
 import java.util.List;
 
@@ -20,6 +22,7 @@ public class EspecialidadService {
     }
 
     @Transactional
+    @CacheEvict(value = "especialidades", allEntries = true)
     public EspecialidadResponse crear(EspecialidadRequest request) {
         if (especialidadRepository.findByNombre(request.getNombre()).isPresent()) {
             throw new IllegalArgumentException("Ya existe una especialidad con el nombre " + request.getNombre() + ".");
@@ -37,11 +40,13 @@ public class EspecialidadService {
         return mapearAResponse(especialidad);
     }
 
+    @Cacheable("especialidades")
     public List<EspecialidadResponse> listarTodos() {
         return especialidadRepository.findAll().stream().map(this::mapearAResponse).toList();
     }
 
     @Transactional
+    @CacheEvict(value = "especialidades", allEntries = true)
     public EspecialidadResponse actualizar(Long id, EspecialidadRequest request) {
         Especialidad especialidad = especialidadRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Especialidad no encontrada."));
@@ -52,6 +57,7 @@ public class EspecialidadService {
     }
 
     @Transactional
+    @CacheEvict(value = "especialidades", allEntries = true)
     public void eliminar(Long id, Long usuarioQueElimina) {
         Especialidad especialidad = especialidadRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Especialidad no encontrada."));

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
@@ -53,6 +53,13 @@
                     </span>
                 </td>
                 <td>
+                    <!-- Botón de Pagar -->
+                    <a th:href="@{'/paciente/portal/citas/' + ${cita.id} + '/pagar'}"
+                       class="btn btn-sm btn-outline-success"
+                       th:if="${#strings.equals(cita.estado, 'RESERVADA')}">
+                        <i class="bi bi-credit-card"></i> Pagar
+                    </a>
+                    
                     <!-- Botón de Cancelar -->
                     <form th:action="@{/paciente/portal/citas/cancelar/{id}(id=${cita.id})}" method="post" style="display:inline;">
                         <button type="submit" class="btn btn-sm btn-outline-danger"
@@ -61,6 +68,7 @@
                             <i class="bi bi-x-circle"></i> Cancelar
                         </button>
                     </form>
+                    
                     <!-- Botón de Reagendar (MODIFICADO) -->
                     <a th:href="@{/paciente/portal/citas/reagendar/{id}(id=${cita.id})}"
                        class="btn btn-sm btn-outline-secondary ms-1"

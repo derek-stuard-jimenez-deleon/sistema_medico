@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
@@ -19,11 +19,23 @@
 
     <!-- Formulario de Búsqueda -->
     <div class="card card-panel p-3 mb-3">
-        <form th:action="@{/recepcion}" method="get" class="d-flex gap-2">
-            <input type="text" name="dpi" class="form-control"
-                   placeholder="Ingresa DPI del paciente para buscar sus citas"
-                   th:value="${dpiBuscado}" maxlength="13" inputmode="numeric" required>
-            <button type="submit" class="btn btn-sistema"><i class="bi bi-search"></i> Buscar</button>
+        <form th:action="@{/recepcion}" method="get">
+            <div class="mb-3 d-flex gap-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="tipoBusqueda" id="busquedaDpi" value="dpi" th:checked="${tipoBusqueda == null or tipoBusqueda == 'dpi'}">
+                    <label class="form-check-label" for="busquedaDpi">Por DPI</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="tipoBusqueda" id="busquedaCita" value="citaId" th:checked="${tipoBusqueda == 'citaId'}">
+                    <label class="form-check-label" for="busquedaCita">Por No. Cita</label>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <input type="text" name="term" id="termInput" class="form-control"
+                       placeholder="Ingresa DPI o No. de Cita"
+                       th:value="${termBuscado}" inputmode="numeric" required>
+                <button type="submit" class="btn btn-sistema"><i class="bi bi-search"></i> Buscar</button>
+            </div>
         </form>
     </div>
 
@@ -33,24 +45,41 @@
 
     <!-- Resultados de la Búsqueda -->
     <div th:if="${citas != null}">
-        <h5 class="mb-3">Citas encontradas para el DPI: <span class="fw-bold" th:text="${dpiBuscado}"></span></h5>
+        <h5 class="mb-3">Resultados de búsqueda para: <span class="fw-bold" th:text="${termBuscado}"></span></h5>
 
         <!-- Caso: No se encontraron citas -->
         <div class="card card-panel p-4 text-center" th:if="${#lists.isEmpty(citas)}">
-            <p class="text-muted mb-0">No se encontraron citas para el DPI ingresado.</p>
+            <div th:if="${pacienteExiste != null}">
+                <div th:if="${!pacienteExiste}">
+                    <h5 class="text-danger"><i class="bi bi-exclamation-triangle"></i> Paciente no registrado</h5>
+                    <p class="text-muted">No se encontró ningún paciente con ese DPI. Es necesario registrar al paciente antes de continuar.</p>
+                    <a th:href="@{/registro}" class="btn btn-primary mt-2"><i class="bi bi-person-plus"></i> Registrar Paciente</a>
+                </div>
+                <div th:if="${pacienteExiste}">
+                    <h5 class="text-warning"><i class="bi bi-info-circle"></i> Sin citas activas</h5>
+                    <p class="text-muted">El paciente está registrado pero no tiene citas activas.</p>
+                    <a th:href="@{/paciente/portal/citas/agendar(dpi=${termBuscado})}" class="btn btn-success mt-2"><i class="bi bi-calendar-plus"></i> Nueva Cita (Walk-in)</a>
+                </div>
+            </div>
+            <div th:if="${pacienteExiste == null}">
+                <p class="text-muted mb-0">No se encontró ninguna cita con el criterio ingresado.</p>
+            </div>
         </div>
 
         <!-- Caso: Se encontraron citas -->
         <div class="row row-cols-1 row-cols-md-2 g-4" th:unless="${#lists.isEmpty(citas)}">
             <div class="col" th:each="cita : ${citas}">
-                <div class="card h-100">
+                <div class="card h-100" th:classappend="${#strings.containsIgnoreCase(cita.motivoVisita, 'EMERGENCIA')} ? 'border-danger' : ''">
                     <div class="card-body">
                         <div class="d-flex justify-content-between">
                             <h5 class="card-title" th:text="${cita.especialidadNombre}"></h5>
-                            <span class="badge"
-                                  th:classappend="${#strings.equals(cita.estado, 'PAGADA')} ? 'bg-success' : (${#strings.equals(cita.estado, 'RESERVADA')} ? 'bg-warning text-dark' : 'bg-secondary')"
-                                  th:text="${cita.estado}">
-                            </span>
+                            <div>
+                                <span class="badge bg-danger me-1" th:if="${#strings.containsIgnoreCase(cita.motivoVisita, 'EMERGENCIA')}">EMERGENCIA</span>
+                                <span class="badge"
+                                      th:classappend="${#strings.equals(cita.estado, 'PAGADA')} ? 'bg-success' : (${#strings.equals(cita.estado, 'RESERVADA')} ? 'bg-warning text-dark' : (${#strings.equals(cita.estado, 'PACIENTE_PRESENTE')} ? 'bg-info text-dark' : 'bg-secondary'))"
+                                      th:text="${cita.estado}">
+                                </span>
+                            </div>
                         </div>
                         <p class="card-text mb-1">
                             <i class="bi bi-person"></i> <span th:text="${cita.medicoNombre}"></span>
@@ -58,28 +87,45 @@
                         <p class="card-text">
                             <i class="bi bi-calendar-event"></i> <span th:text="${#temporals.format(cita.fechaHora, 'dd/MM/yyyy HH:mm')}"></span>
                         </p>
+                        <p class="card-text text-muted small">
+                            <i class="bi bi-card-text"></i> <span th:text="${cita.motivoVisita}"></span>
+                        </p>
                     </div>
-                    <div class="card-footer bg-light d-flex justify-content-between align-items-center">
-                        <small class="text-muted" th:text="'Cita #' + ${cita.id}"></small>
+                    <div class="card-footer bg-light d-flex flex-column gap-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted" th:text="'Cita #' + ${cita.id}"></small>
+                            <span th:if="${#strings.equals(cita.estado, 'PACIENTE_PRESENTE')}" class="badge bg-info text-dark">Llegada registrada — esperando llamado de enfermería</span>
+                            <span th:if="${#strings.equals(cita.estado, 'PENDIENTE_PAGO') or #strings.equals(cita.estado, 'RESERVADA')}" class="text-warning small fw-bold">Requiere pago en caja</span>
+                            <span th:if="${#strings.equals(cita.estado, 'CANCELADA')}" class="text-danger small fw-bold">La cita fue cancelada.</span>
+                        </div>
 
                         <!-- Lógica de Botones -->
-                        <div th:switch="${cita.verificada}">
-                            <!-- Caso 1: Ya verificada -->
-                            <span th:case="true" class="badge bg-info"><i class="bi bi-check-lg"></i> Llegada Verificada</span>
+                        <div class="d-flex justify-content-end gap-2 mt-2" th:if="${!#strings.equals(cita.estado, 'PACIENTE_PRESENTE')}">
+                            
+                            <!-- FA08: Boton de Emergencia -->
+                            <form th:if="${!#strings.equals(cita.estado, 'CANCELADA')}" th:action="@{/recepcion/{id}/emergencia(id=${cita.id})}" method="post" class="mb-0">
+                                <input type="hidden" name="term" th:value="${termBuscado}">
+                                <input type="hidden" name="tipoBusqueda" th:value="${tipoBusqueda}">
+                                <button type="submit" class="btn btn-sm btn-danger">
+                                    <i class="bi bi-heart-pulse"></i> Signos Vitales (Urgente)
+                                </button>
+                            </form>
 
-                            <!-- Caso 2: No verificada y pagada -->
-                            <form th:case="false" th:if="${#strings.equals(cita.estado, 'PAGADA')}"
+                            <!-- Verificar Llegada -->
+                            <form th:if="${#strings.equals(cita.estado, 'PAGADA') or #strings.equals(cita.estado, 'CONFIRMADA')}"
                                   th:action="@{/recepcion/{id}/verificar(id=${cita.id})}" method="post" class="mb-0">
-                                <input type="hidden" name="dpi" th:value="${dpiBuscado}">
+                                <input type="hidden" name="term" th:value="${termBuscado}">
+                                <input type="hidden" name="tipoBusqueda" th:value="${tipoBusqueda}">
                                 <button type="submit" class="btn btn-sm btn-success">
                                     <i class="bi bi-check-circle"></i> Verificar Llegada
                                 </button>
                             </form>
 
-                            <!-- Caso 3: Pendiente de pago -->
-                            <span th:case="*" th:if="${!#strings.equals(cita.estado, 'PAGADA')}" class="text-warning small">
-                                Requiere pago en caja
-                            </span>
+                            <!-- Walk-in o Nueva Cita -->
+                            <a th:if="${#strings.equals(cita.estado, 'CANCELADA')}" th:href="@{/paciente/portal/citas/agendar(dpi=${termBuscado})}" class="btn btn-sm btn-outline-primary">Nueva Cita</a>
+                            
+                            <!-- Reasignar Médico -->
+                            <a th:if="${#strings.equals(cita.estado, 'PAGADA') or #strings.equals(cita.estado, 'CONFIRMADA')}" href="#" class="btn btn-sm btn-outline-secondary">Reasignar Médico</a>
                         </div>
                     </div>
                 </div>
@@ -89,5 +135,37 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const busquedaDpi = document.getElementById('busquedaDpi');
+        const busquedaCita = document.getElementById('busquedaCita');
+        const termInput = document.getElementById('termInput');
+
+        function updateInputRestrictions() {
+            if (busquedaDpi.checked) {
+                termInput.maxLength = 13;
+                termInput.placeholder = "Ingresa los 13 dígitos del DPI";
+                termInput.pattern = "\\d{13}";
+                termInput.title = "El DPI debe contener exactamente 13 dígitos numéricos";
+            } else {
+                termInput.removeAttribute('maxLength');
+                termInput.placeholder = "Ingresa el No. de Cita";
+                termInput.pattern = "\\d+";
+                termInput.title = "El número de cita debe ser numérico";
+            }
+        }
+
+        busquedaDpi.addEventListener('change', updateInputRestrictions);
+        busquedaCita.addEventListener('change', updateInputRestrictions);
+        
+        // Ejecutar al cargar la página
+        updateInputRestrictions();
+        
+        // Validar que solo se ingresen números
+        termInput.addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+    });
+</script>
 </body>
 </html>

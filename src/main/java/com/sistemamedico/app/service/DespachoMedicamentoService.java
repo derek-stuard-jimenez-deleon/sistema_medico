@@ -88,6 +88,8 @@ public class DespachoMedicamentoService {
             movimiento.setSucursal(sucursal);
             movimiento.setTipoMovimiento(MovimientoInventario.TipoMovimiento.SALIDA_AJUSTE);
             movimiento.setCantidad(cantidad);
+            movimiento.setStockAnterior(inventario.getStockActual() + cantidad);
+            movimiento.setStockNuevo(inventario.getStockActual());
             movimiento.setMotivo("Despacho de receta #" + receta.getId());
             movimiento.setUsuario(farmaceutico);
             movimientoInventarioRepository.save(movimiento);

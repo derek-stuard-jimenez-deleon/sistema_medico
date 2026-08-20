@@ -12,4 +12,7 @@ public interface InventarioMedicamentoRepository extends JpaRepository<Inventari
 
     // Util para la alerta de stock minimo (RN-CU10-03)
     List<InventarioMedicamento> findByStockActualLessThanEqual(Integer stockMinimoComparado);
+
+    @org.springframework.data.jpa.repository.Query("SELECT i FROM InventarioMedicamento i JOIN FETCH i.medicamento JOIN FETCH i.sucursal")
+    List<InventarioMedicamento> findAllWithDetails();
 }

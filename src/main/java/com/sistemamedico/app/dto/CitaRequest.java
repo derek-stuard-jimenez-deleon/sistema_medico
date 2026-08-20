@@ -27,6 +27,8 @@ public class CitaRequest {
 
     @Size(max = 2000, message = "El motivo no puede exceder 2000 caracteres.")
     private String motivoVisita;
+    
+    private boolean interna;
 
     // --- Getters y setters ---
     public Long getPacienteId() { return pacienteId; }
@@ -41,4 +43,6 @@ public class CitaRequest {
     public void setFechaHora(LocalDateTime fechaHora) { this.fechaHora = fechaHora; }
     public String getMotivoVisita() { return motivoVisita; }
     public void setMotivoVisita(String motivoVisita) { this.motivoVisita = motivoVisita; }
+    public boolean isInterna() { return interna; }
+    public void setInterna(boolean interna) { this.interna = interna; }
 }

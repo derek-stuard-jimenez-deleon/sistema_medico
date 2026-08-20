@@ -1,0 +1,69 @@
+﻿<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>¡Pago Exitoso! - Portal de Pacientes</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link th:href="@{/css/estilos.css}" rel="stylesheet">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main class="container mt-5" th:if="${pago != null and cita != null}">
+    <div class="card card-panel p-5 mx-auto text-center" style="max-width: 650px;">
+        <i class="bi bi-check-circle-fill text-success" style="font-size: 5rem;"></i>
+        <h2 class="fw-bold mt-3">¡Pago Exitoso!</h2>
+        <p class="text-muted">Su pago ha sido procesado correctamente y su cita ha sido confirmada.</p>
+        
+        <div class="alert alert-info mt-3">
+            <i class="bi bi-envelope-check"></i> Hemos enviado un comprobante de pago a su correo electrónico.
+        </div>
+
+        <div class="card bg-light text-start mt-4">
+            <div class="card-body">
+                <h5 class="card-title border-bottom pb-2">Comprobante de Transacción</h5>
+                <dl class="row mb-0 mt-3">
+                    <dt class="col-sm-5">No. Transacción</dt>
+                    <dd class="col-sm-7 fw-bold font-monospace" th:text="${pago.numeroTransaccion}"></dd>
+
+                    <dt class="col-sm-5">Médico</dt>
+                    <dd class="col-sm-7" th:text="${cita.medicoNombre}"></dd>
+
+                    <dt class="col-sm-5">Especialidad</dt>
+                    <dd class="col-sm-7" th:text="${cita.especialidadNombre}"></dd>
+
+                    <dt class="col-sm-5">Sucursal</dt>
+                    <dd class="col-sm-7" th:text="${cita.sucursalNombre}"></dd>
+
+                    <dt class="col-sm-5">Fecha y Hora</dt>
+                    <dd class="col-sm-7" th:text="${#temporals.format(cita.fechaHora, 'dd/MM/yyyy HH:mm')}"></dd>
+
+                    <dt class="col-sm-5">Tarjeta terminada en</dt>
+                    <dd class="col-sm-7 font-monospace">**** <span th:text="${pago.metodoPago == 'VISA_CREDITO' ? 'XXXX' : 'XXXX'}"></span></dd>
+
+                    <dt class="col-sm-5">Monto Pagado</dt>
+                    <dd class="col-sm-7 fw-bold text-success" th:text="'Q ' + ${#numbers.formatDecimal(pago.monto, 1, 2)}"></dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="mt-4 d-flex gap-3 justify-content-center">
+            <a th:href="@{/dashboard}" class="btn btn-outline-primary"><i class="bi bi-house"></i> Volver al Portal</a>
+            <a th:href="@{/paciente/portal/citas}" class="btn btn-sistema"><i class="bi bi-calendar-check"></i> Ver Mis Citas</a>
+        </div>
+    </div>
+</main>
+
+<main class="container mt-5" th:unless="${pago != null and cita != null}">
+    <div class="alert alert-warning text-center">
+        No se encontraron los datos del pago.
+    </div>
+    <div class="text-center">
+        <a th:href="@{/dashboard}" class="btn btn-primary">Ir al inicio</a>
+    </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -38,7 +38,7 @@ public class RolService {
     }
 
     public List<RolResponse> listarTodos() {
-        return rolRepository.findAll().stream().map(this::mapearAResponse).toList();
+        return rolRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "id")).stream().map(this::mapearAResponse).toList();
     }
 
     @Transactional

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
@@ -12,42 +12,64 @@
 
 <main class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="fw-bold mb-0">Toma de Signos Vitales</h4>
+        <h4 class="fw-bold mb-0">Estación de Enfermería - Toma de Signos Vitales</h4>
         <a th:href="@{/dashboard}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Volver</a>
-    </div>
-
-    <div class="card card-panel p-3 mb-3">
-        <form th:action="@{/enfermeria}" method="get" class="d-flex gap-2">
-            <input type="text" name="dpi" class="form-control"
-                   placeholder="Ingresa DPI del paciente para buscar sus citas pagadas"
-                   th:value="${dpiBuscado}" maxlength="13" inputmode="numeric" required>
-            <button type="submit" class="btn btn-sistema"><i class="bi bi-search"></i> Buscar</button>
-        </form>
     </div>
 
     <div class="alert alert-success" th:if="${mensajeExito}" th:text="${mensajeExito}"></div>
     <div class="alert alert-danger" th:if="${errorNegocio}" th:text="${errorNegocio}"></div>
 
-    <div th:if="${citas != null}">
-        <h5 class="mb-3">Citas pendientes de signos vitales para el DPI: <span class="fw-bold" th:text="${dpiBuscado}"></span></h5>
+    <div class="row">
+        <!-- COLUMNA IZQUIERDA: COLA DE ESPERA -->
+        <div class="col-md-5">
+            <div class="card card-panel mb-3">
+                <div class="card-header bg-light fw-bold">Sala de Espera (Hoy)</div>
+                <div class="list-group list-group-flush" th:if="${not #lists.isEmpty(citas)}">
 
-        <div class="card card-panel p-4 text-center" th:if="${#lists.isEmpty(citas)}">
-            <p class="text-muted mb-0">No hay citas pagadas pendientes de signos vitales para este DPI.</p>
+                    <div th:each="cita, iter : ${citas}" class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1 fw-bold" th:text="${cita.pacienteNombre}"></h6>
+                            <small th:text="'#' + ${cita.id}"></small>
+                        </div>
+                        <p class="mb-1 text-muted small" th:text="${cita.especialidadNombre} + ' - ' + ${cita.medicoNombre}"></p>
+
+                        <!-- Si no está en atención, mostramos botón de Llamar -->
+                        <form th:if="${cita.estado != 'EN_SIGNOS_VITALES'}"
+                              th:action="@{/enfermeria/{id}/llamar(id=${cita.id})}" method="post"
+                              th:id="'form-llamar-' + ${cita.id}">
+
+                            <!-- El botón guarda los datos y el JS escucha el clic (Thymeleaf 3.1+ seguro) -->
+                            <button type="button" class="btn btn-sistema btn-sm mt-2 w-100 btn-llamar-paciente"
+                                    th:data-id="${cita.id}" th:data-nombre="${cita.pacienteNombre}">
+                                <i class="bi bi-megaphone"></i> Llamar y Tomar Signos
+                            </button>
+                        </form>
+
+                        <!-- Si ya está en atención, se ve resaltado -->
+                        <div th:if="${cita.estado == 'EN_SIGNOS_VITALES'}" class="badge bg-warning text-dark mt-2 w-100">
+                            En Atención Actual
+                        </div>
+                    </div>
+
+                </div>
+                <div class="card-body text-center text-muted" th:if="${#lists.isEmpty(citas)}">
+                    No hay pacientes en sala de espera.
+                </div>
+            </div>
         </div>
 
-        <div class="accordion" id="acordeonCitas" th:unless="${#lists.isEmpty(citas)}">
-            <div class="accordion-item" th:each="cita, iter : ${citas}">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                            th:data-bs-target="'#colapso-' + ${cita.id}">
-                        <span th:text="'Cita #' + ${cita.id} + ' — ' + ${cita.especialidadNombre} + ' — ' + ${cita.medicoNombre}"></span>
-                    </button>
-                </h2>
-                <div th:id="'colapso-' + ${cita.id}" class="accordion-collapse collapse" data-bs-parent="#acordeonCitas">
-                    <div class="accordion-body">
-                        <form th:action="@{/enfermeria/{id}/registrar(id=${cita.id})}" method="post"
-                              class="row g-3 formulario-signos" novalidate>
-                            <input type="hidden" name="dpi" th:value="${dpiBuscado}">
+        <!-- COLUMNA DERECHA: FORMULARIO DE CAPTURA -->
+        <div class="col-md-7">
+            <div class="card card-panel" th:if="${citaEnAtencion != null}">
+                <div class="card-header bg-sistema text-white fw-bold">
+                    Registro de Signos Vitales
+                </div>
+                <div class="card-body">
+                    <!-- Buscamos la cita que está en atención para armar el form -->
+                    <div th:each="cita : ${citas}" th:if="${cita.id == citaEnAtencion}">
+                        <h5 class="text-primary mb-3" th:text="${cita.pacienteNombre}"></h5>
+
+                        <form th:action="@{/enfermeria/{id}/registrar(id=${cita.id})}" method="post" class="row g-3 formulario-signos" novalidate>
 
                             <div class="col-md-6">
                                 <label class="form-label">Presión sistólica (mmHg)</label>
@@ -99,7 +121,7 @@
                             <div class="col-12">
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" role="switch"
-                                           name="esEmergencia" value="true" id="emergencia-${cita.id}">
+                                           name="esEmergencia" value="true" th:id="'emergencia-' + ${cita.id}">
                                     <label class="form-check-label text-danger fw-bold" th:for="'emergencia-' + ${cita.id}">
                                         <i class="bi bi-exclamation-octagon-fill"></i> ¿Es Emergencia?
                                     </label>
@@ -109,14 +131,19 @@
                                 </div>
                             </div>
 
-                            <div class="col-12 text-end">
-                                <button type="submit" class="btn btn-sistema">
-                                    <i class="bi bi-clipboard2-pulse"></i> Registrar Signos Vitales
+                            <div class="col-12 text-end mt-4">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-check-circle"></i> Guardar y Enviar a Consulta
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
+            </div>
+
+            <div class="card card-panel p-5 text-center text-muted" th:if="${citaEnAtencion == null}">
+                <i class="bi bi-arrow-left-circle display-4"></i>
+                <p class="mt-3">Selecciona "Llamar y Tomar Signos" a un paciente en la lista de espera para habilitar el formulario.</p>
             </div>
         </div>
     </div>
@@ -124,8 +151,70 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // RN-CU07-06: alertas clínicas en tiempo real (valores dentro del rango de
-    // captura pero fuera del rango clínico normal). No bloquea el envío.
+    // IMPORTANTE: Los navegadores cargan las voces de forma asíncrona,
+    // ejecutamos esto para que estén listas cuando presiones el botón.
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = function() {
+            window.speechSynthesis.getVoices();
+        };
+    }
+
+    // 1. Funcionalidad de Voz (TTS) para llamar al paciente
+    function llamarYHablar(citaId, nombrePaciente) {
+        var form = document.getElementById('form-llamar-' + citaId);
+
+        if ('speechSynthesis' in window) {
+            var mensaje = new SpeechSynthesisUtterance('Paciente ' + nombrePaciente + ', favor pasar a toma de signos vitales.');
+            mensaje.lang = 'es-MX'; // Español latino
+            mensaje.rate = 0.9;
+
+            // --- NUEVO: Buscar la voz más humana disponible ---
+            var voces = window.speechSynthesis.getVoices();
+            // Busca primero voces de Google o las voces "Natural" de Edge
+            var vozHumana = voces.find(voz => voz.lang.includes('es') && (voz.name.includes('Google') || voz.name.includes('Natural')));
+
+            if (vozHumana) {
+                mensaje.voice = vozHumana;
+            }
+            // --------------------------------------------------
+
+            // Evento: Cuando termine de hablar, entonces enviamos el formulario
+            mensaje.onend = function(event) {
+                form.submit();
+            };
+
+            // Evento: Por si falla algo con el motor de audio, que no se quede bloqueado
+            mensaje.onerror = function(event) {
+                console.warn("Fallo al reproducir audio", event);
+                form.submit();
+            };
+
+            window.speechSynthesis.speak(mensaje);
+
+            // Timeout de respaldo de 5 segundos: si por alguna razón extraña
+            // no dispara el 'onend', forzamos el submit para que la app no se trabe
+            setTimeout(function() {
+                if(!window.speechSynthesis.speaking) {
+                    form.submit();
+                }
+            }, 5000);
+
+        } else {
+            console.warn("El navegador no soporta síntesis de voz");
+            form.submit();
+        }
+    }
+
+    // 1.5 Enganchamos el evento de clic de forma segura (Thymeleaf 3.1+)
+    document.querySelectorAll('.btn-llamar-paciente').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var citaId = this.getAttribute('data-id');
+            var nombrePaciente = this.getAttribute('data-nombre');
+            llamarYHablar(citaId, nombrePaciente);
+        });
+    });
+
+    // 2. RN-CU07-06: alertas clínicas en tiempo real
     document.querySelectorAll('.formulario-signos').forEach(function (form) {
         var camposVitales = form.querySelectorAll('.campo-vital');
         var resumen = form.querySelector('.resumen-alertas');

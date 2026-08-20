@@ -1,0 +1,74 @@
+﻿<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Inventario Actual - Sistema Medico 2026</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link th:href="@{/css/estilos.css}" rel="stylesheet">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="fw-bold mb-0"><i class="bi bi-box-seam"></i> Catálogo de Inventario Actual (CU-14)</h4>
+        <div>
+            <a th:href="@{/inventario/movimientos}" class="btn btn-outline-sistema me-2">
+                <i class="bi bi-clock-history"></i> Ver Bitácora (Kardex)
+            </a>
+            <a th:href="@{/dashboard}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="card card-panel p-3">
+        <table id="tablaInventario" class="table table-sistema align-middle">
+            <thead>
+            <tr>
+                <th>Sucursal</th>
+                <th>Medicamento</th>
+                <th>Stock Actual</th>
+                <th>Estado</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="inv : ${inventarios}">
+                <td th:text="${inv.sucursal.nombre}"></td>
+                <td th:text="${inv.medicamento.nombre}"></td>
+                <td class="fw-bold text-center fs-5" th:text="${inv.stockActual}"></td>
+                <td class="text-center">
+                    <span th:if="${inv.stockActual > 20}" class="badge bg-success">
+                        <i class="bi bi-check-circle"></i> Suficiente
+                    </span>
+                    <span th:if="${inv.stockActual > 0 and inv.stockActual <= 20}" class="badge bg-warning text-dark">
+                        <i class="bi bi-exclamation-triangle"></i> Bajo Stock
+                    </span>
+                    <span th:if="${inv.stockActual == 0}" class="badge bg-danger">
+                        <i class="bi bi-x-circle"></i> Agotado
+                    </span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#tablaInventario').DataTable({
+            "order": [ [ 0, "asc" ], [ 1, "asc" ] ],
+            "language": {
+                "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+            }
+        });
+    });
+</script>
+</body>
+</html>

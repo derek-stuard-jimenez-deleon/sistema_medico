@@ -57,7 +57,17 @@ public class Cita extends BaseEntity {
     private boolean verificada = false;
 
     public enum EstadoCita {
-        RESERVADA, PENDIENTE_PAGO, PAGADA, CANCELADA, ATENDIDA, REAGENDADA, ELIMINADA, PENDIENTE_CONSULTA_EMERGENCIA // <-- AÑADIDO
+        RESERVADA,
+        PENDIENTE_PAGO,
+        PAGADA,
+        PACIENTE_PRESENTE,       // Llegó a la clínica (CU-5)
+        EN_SIGNOS_VITALES,       // Enfermería lo está atendiendo (CU-7)
+        EN_ESPERA_CONSULTA,      // Terminó signos, espera al doctor (Fin CU-7)
+        CANCELADA,
+        ATENDIDA,
+        REAGENDADA,
+        ELIMINADA,
+        PENDIENTE_CONSULTA_EMERGENCIA
     }
 
     public Boolean isVerificada() { return verificada; }

@@ -15,6 +15,10 @@ public interface CitaRepository extends JpaRepository<Cita, Long> {
     // Nuevo método para buscar citas de un médico en un rango de fechas (un día)
     List<Cita> findByMedicoIdAndFechaHoraBetween(Long medicoId, LocalDateTime startOfDay, LocalDateTime endOfDay);
 
+    // Nuevo método para buscar la cola de enfermería
+    @EntityGraph(attributePaths = {"paciente", "medico", "especialidad", "sucursal"})
+    List<Cita> findByEstadoInAndFechaHoraBetweenOrderByFechaHoraAsc(List<Cita.EstadoCita> estados, java.time.LocalDateTime inicio, java.time.LocalDateTime fin);
+
     // Nuevo método para buscar citas por DPI y una lista de estados, ordenadas por ID ascendente
     @EntityGraph(attributePaths = {"paciente", "medico", "especialidad", "sucursal"})
     List<Cita> findByPacienteDpiAndEstadoInOrderByIdAsc(String dpi, List<Cita.EstadoCita> estados);

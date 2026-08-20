@@ -63,6 +63,7 @@ public class SedeEspecialidadService {
         SedeEspecialidadResponse dto = new SedeEspecialidadResponse();
         dto.setId(sedeEspecialidad.getId());
         dto.setSucursalNombre(sedeEspecialidad.getSucursal().getNombre());
+        dto.setEspecialidadId(sedeEspecialidad.getEspecialidad().getId());
         dto.setEspecialidadNombre(sedeEspecialidad.getEspecialidad().getNombre());
         return dto;
     }

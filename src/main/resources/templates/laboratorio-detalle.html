@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Detalle de Orden - Sistema Médico</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <style>
+        .examen-card { border-left: 4px solid #0d6efd; margin-bottom: 1.5rem; }
+        .examen-publicado { border-left: 4px solid #198754; background-color: #f8fff9; }
+        .bg-pendiente-pago { background-color: #fff8e6; border: 1px solid #ffe69c; }
+    </style>
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#"><i class="bi bi-heart-pulse-fill me-2"></i>Sistema Médico 2026</a>
+        <div class="d-flex align-items-center">
+            <span class="text-light me-3" th:text="${#authentication.name}">usuario</span>
+            <form th:action="@{/logout}" method="post" class="m-0">
+                <button class="btn btn-outline-light btn-sm" type="submit"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-4 mb-5">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a th:href="@{/laboratorio}" class="text-decoration-none text-muted small"><i class="bi bi-arrow-left"></i> Volver a Órdenes</a>
+            <h2 class="fw-bold mt-1 mb-0">Orden de Laboratorio #<span th:text="${orden.id}"></span></h2>
+        </div>
+        <div>
+            <span class="badge fs-6" th:classappend="${orden.estado.name() == 'PENDIENTE' ? 'bg-warning text-dark' : (orden.estado.name() == 'EN_PROCESO' ? 'bg-primary' : 'bg-success')}" th:text="${orden.estado.name().replace('_', ' ')}">EN PROCESO</span>
+        </div>
+    </div>
+
+    <div th:if="${errorNegocio}" class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i> <span th:text="${errorNegocio}">Error</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    
+    <div th:if="${mensajeExito}" class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i> <span th:text="${mensajeExito}">¡Éxito!</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <!-- Alerta de pago pendiente -->
+    <div th:if="${orden.estado.name() == 'PENDIENTE'}" class="alert bg-pendiente-pago shadow-sm p-4 text-center">
+        <i class="bi bi-cash-coin fs-1 text-warning mb-2 d-block"></i>
+        <h4 class="alert-heading text-dark">Pendiente de Pago</h4>
+        <p class="mb-0 text-dark">El paciente debe pasar a Caja a cancelar el monto de <strong>Q<span th:text="${orden.montoTotal}"></span></strong> antes de que se puedan registrar los resultados de las muestras.</p>
+    </div>
+
+    <div class="row">
+        <!-- Detalles del Paciente -->
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0"><i class="bi bi-person-lines-fill me-2 text-primary"></i>Información del Paciente</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2"><strong>Nombre:</strong> <span th:text="${orden.paciente.nombreCompleto}"></span></li>
+                        <li class="mb-2"><strong>DPI:</strong> <span th:text="${orden.paciente.dpi}"></span></li>
+                        <li class="mb-2"><strong>Teléfono:</strong> <span th:text="${orden.paciente.telefono}"></span></li>
+                        <hr>
+                        <li class="mb-2"><strong>Médico Solicitante:</strong> <span th:text="${orden.medico.nombreCompleto}"></span></li>
+                        <li class="mb-2"><strong>Fecha Solicitud:</strong> <span th:text="${#temporals.format(orden.fechaCreacion, 'dd/MM/yyyy HH:mm')}"></span></li>
+                        <li class="mb-0"><strong>Total Orden:</strong> Q<span th:text="${orden.montoTotal}"></span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Exámenes y Resultados -->
+        <div class="col-md-8">
+            <h4 class="mb-3">Exámenes Solicitados</h4>
+            
+            <div th:each="detalle : ${detalles}" 
+                 class="card shadow-sm examen-card"
+                 th:classappend="${mapaResultados.containsKey(detalle.id) && mapaResultados.get(detalle.id).publicado} ? 'examen-publicado' : ''">
+                
+                <div class="card-body" th:with="res=${mapaResultados.get(detalle.id)}">
+                    <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                        <h5 class="card-title mb-0 fw-bold text-dark" th:text="${detalle.examen.nombre}">Glucosa</h5>
+                        <div>
+                            <span class="badge bg-secondary" th:text="'Ref: ' + ${detalle.examen.rangoReferenciaMin} + ' - ' + ${detalle.examen.rangoReferenciaMax} + ' ' + ${detalle.examen.unidadMedida}">Ref: 70 - 100 mg/dL</span>
+                            <span th:if="${res != null && res.publicado}" class="badge bg-success ms-2"><i class="bi bi-check-circle-fill me-1"></i> PUBLICADO</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Formulario de Resultado -->
+                    <form th:action="@{/laboratorio/orden/{ordenId}/resultado(ordenId=${orden.id})}" method="post" class="row g-3 align-items-end">
+                        
+                        <input type="hidden" name="detalleId" th:value="${detalle.id}">
+                        
+                        <!-- Si está publicado, deshabilitar campos -->
+                        <fieldset th:disabled="${res != null && res.publicado}" class="row g-3 m-0 p-0 w-100">
+                            <div class="col-md-4">
+                                <label class="form-label small text-muted mb-1">Valor Obtenido</label>
+                                <input type="number" step="0.01" class="form-control valor-input" name="valor" th:value="${res != null ? res.valor : ''}" required
+                                       th:data-min="${detalle.examen.rangoReferenciaMin}" 
+                                       th:data-max="${detalle.examen.rangoReferenciaMax}"
+                                       th:data-target="'fueraRango_' + ${detalle.id}"
+                                       oninput="verificarRango(this)">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small text-muted mb-1">Unidad</label>
+                                <input type="text" class="form-control bg-light" name="unidadMedida" th:value="${detalle.examen.unidadMedida}" readonly>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-center">
+                                <div class="form-check mt-3">
+                                    <input class="form-check-input" type="checkbox" name="fueraDeRango" value="true" th:checked="${res != null && res.fueraDeRango}" th:id="'fueraRango_' + ${detalle.id}">
+                                    <label class="form-check-label small text-danger" th:for="'fueraRango_' + ${detalle.id}">
+                                        Fuera de Rango
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-2" th:if="${res == null || !res.publicado}">
+                                <button type="submit" class="btn btn-primary w-100" th:disabled="${orden.estado.name() == 'PENDIENTE'}">Guardar</button>
+                            </div>
+                        </fieldset>
+                    </form>
+
+                    <!-- Botón para Publicar (Solo si ya hay resultado guardado y NO está publicado) -->
+                    <div th:if="${res != null && !res.publicado}" class="mt-3 text-end border-top pt-3">
+                        <form th:action="@{/laboratorio/orden/{ordenId}/publicar(ordenId=${orden.id})}" method="post" onsubmit="return confirm('¿Está seguro de publicar este resultado? Ya no podrá modificarlo.');">
+                            <input type="hidden" name="detalleId" th:value="${detalle.id}">
+                            <button type="submit" class="btn btn-success"><i class="bi bi-send-check me-1"></i> Publicar Resultado</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function verificarRango(inputElem) {
+    let valorStr = inputElem.value;
+    if (!valorStr) return;
+    
+    let valor = parseFloat(valorStr);
+    let min = parseFloat(inputElem.getAttribute('data-min'));
+    let max = parseFloat(inputElem.getAttribute('data-max'));
+    
+    // El id del target tiene caracteres parseados de Thymeleaf
+    let targetIdStr = inputElem.getAttribute('data-target');
+    let targetId = targetIdStr;
+    let checkbox = document.getElementById(targetId);
+    
+    if (checkbox) {
+        if (!isNaN(valor) && !isNaN(min) && !isNaN(max)) {
+            if (valor < min || valor > max) {
+                checkbox.checked = true;
+            } else {
+                checkbox.checked = false;
+            }
+        }
+    }
+}
+</script>
+</body>
+</html>
